@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="@color/bg_dark"
+    android:padding="24dp">
+
+    <!-- Shield Icon & Badge -->
+    <ImageView
+        android:id="@+id/ivShieldIcon"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:src="@drawable/ic_shield"
+        app:tint="@color/gold_primary"
+        android:contentDescription="Discipline Shield" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="PROTECT YOUR DISCIPLINE"
+        android:textColor="@color/gold_primary"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.15" />
+
+    <!-- Blocked App Info -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/card_background"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="20dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="16dp">
+
+        <ImageView
+            android:id="@+id/ivBlockedAppIcon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:contentDescription="App Icon" />
+
+        <TextView
+            android:id="@+id/tvBlockedAppName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Application Blocked"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvBlockReason"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Restricted outside your discipline window."
+            android:textColor="@color/emerald_accent"
+            android:textSize="12sp"
+            android:gravity="center" />
+    </LinearLayout>
+
+    <!-- Scripture Anchor -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/card_background_elevated"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:layout_marginBottom="24dp">
+
+        <TextView
+            android:id="@+id/tvShieldVerse"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="“‘All things are lawful for me,’ but not all things are helpful. ‘All things are lawful for me,’ but I will not be dominated by anything.”"
+            android:textColor="@color/text_primary"
+            android:textSize="13sp"
+            android:lineSpacingExtra="3dp"
+            android:gravity="center" />
+
+        <TextView
+            android:id="@+id/tvShieldRef"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:layout_gravity="center"
+            android:text="1 Corinthians 6:12"
+            android:textColor="@color/gold_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Return to Home Button (Primary action) -->
+    <Button
+        android:id="@+id/btnReturnHome"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:background="@drawable/button_emerald"
+        android:text="Return Home (Choose Discipline)"
+        android:textColor="@color/white"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.05" />
+
+    <!-- Urge Check-in Button -->
+    <Button
+        android:id="@+id/btnShieldUrge"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:layout_marginTop="8dp"
+        android:text="Emergency Urge Check-in →"
+        android:textColor="@color/gold_primary"
+        android:textSize="13sp" />
+
+    <!-- 15-Second Intentional Pass Button -->
+    <TextView
+        android:id="@+id/btnEmergencyPass"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Mindful Pause (15s delay for 2m access)"
+        android:textColor="@color/text_tertiary"
+        android:textSize="12sp"
+        android:padding="8dp" />
+
+</LinearLayout>

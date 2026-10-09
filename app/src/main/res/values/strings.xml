@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">NYIRABYO Life</string>
+    <string name="accessibility_service_description">NYIRABYO Life Guardian Service enforces your personal digital discipline by preventing access to distracting applications outside your scheduled windows, protecting your focus sessions, and providing mindful delays.</string>
+</resources>

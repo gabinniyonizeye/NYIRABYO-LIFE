@@ -1,0 +1,337 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:overScrollMode="never"
+    android:scrollbars="none">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="24dp">
+
+        <!-- Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="14dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="DIGITAL BOUNDARIES"
+                android:textColor="@color/text_tertiary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.2" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="30-MINUTE DAILY BUDGET • SOCIAL CONTROL"
+                android:textColor="@color/rose_alert"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.12"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- INSTAGRAM CARD -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/cardInstagramLimit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/card_background"
+            android:padding="16dp"
+            android:layout_marginBottom="12dp">
+
+            <ImageView
+                android:id="@+id/ivInstagramIcon"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_instagram"
+                app:tint="@color/rose_alert"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                android:contentDescription="Instagram" />
+
+            <TextView
+                android:id="@+id/tvInstagramName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="Instagram"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                app:layout_constraintTop_toTopOf="@id/ivInstagramIcon"
+                app:layout_constraintStart_toEndOf="@id/ivInstagramIcon" />
+
+            <TextView
+                android:id="@+id/tvInstagramBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/pill_background"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp"
+                android:text="30 MIN BUDGET"
+                android:textColor="@color/gold_primary"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <ProgressBar
+                android:id="@+id/pbInstagramUsage"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="0dp"
+                android:layout_height="6dp"
+                android:layout_marginTop="12dp"
+                android:max="30"
+                android:progress="0"
+                android:progressTint="@color/rose_alert"
+                android:progressBackgroundTint="@color/border_subtle"
+                app:layout_constraintTop_toBottomOf="@id/ivInstagramIcon"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <TextView
+                android:id="@+id/tvInstagramUsage"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="0m used today • 30m remaining"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                app:layout_constraintTop_toBottomOf="@id/pbInstagramUsage"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/btnLaunchInstagram" />
+
+            <Button
+                android:id="@+id/btnLaunchInstagram"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:background="@drawable/button_gold"
+                android:text="Open Instagram"
+                android:textColor="@color/bg_dark"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:paddingHorizontal="14dp"
+                app:layout_constraintTop_toBottomOf="@id/pbInstagramUsage"
+                app:layout_constraintEnd_toEndOf="parent" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- TIKTOK CARD -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/cardTikTokLimit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/card_background"
+            android:padding="16dp"
+            android:layout_marginBottom="12dp">
+
+            <ImageView
+                android:id="@+id/ivTikTokIcon"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_tiktok"
+                app:tint="@color/text_primary"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                android:contentDescription="TikTok" />
+
+            <TextView
+                android:id="@+id/tvTikTokName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="TikTok"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                app:layout_constraintTop_toTopOf="@id/ivTikTokIcon"
+                app:layout_constraintStart_toEndOf="@id/ivTikTokIcon" />
+
+            <TextView
+                android:id="@+id/tvTikTokBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/pill_background"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp"
+                android:text="30 MIN BUDGET"
+                android:textColor="@color/gold_primary"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <ProgressBar
+                android:id="@+id/pbTikTokUsage"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="0dp"
+                android:layout_height="6dp"
+                android:layout_marginTop="12dp"
+                android:max="30"
+                android:progress="0"
+                android:progressTint="@color/rose_alert"
+                android:progressBackgroundTint="@color/border_subtle"
+                app:layout_constraintTop_toBottomOf="@id/ivTikTokIcon"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <TextView
+                android:id="@+id/tvTikTokUsage"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="0m used today • 30m remaining"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                app:layout_constraintTop_toBottomOf="@id/pbTikTokUsage"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/btnLaunchTikTok" />
+
+            <Button
+                android:id="@+id/btnLaunchTikTok"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:background="@drawable/button_gold"
+                android:text="Open TikTok"
+                android:textColor="@color/bg_dark"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:paddingHorizontal="14dp"
+                app:layout_constraintTop_toBottomOf="@id/pbTikTokUsage"
+                app:layout_constraintEnd_toEndOf="parent" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- WHATSAPP DAYTIME STATUS CARD -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/cardWhatsAppSchedule"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/card_background"
+            android:padding="16dp"
+            android:layout_marginBottom="12dp">
+
+            <ImageView
+                android:id="@+id/ivWhatsAppScheduleIcon"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_chat"
+                app:tint="@color/emerald_accent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                android:contentDescription="WhatsApp" />
+
+            <TextView
+                android:id="@+id/tvWhatsAppScheduleTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="WhatsApp"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                app:layout_constraintTop_toTopOf="@id/ivWhatsAppScheduleIcon"
+                app:layout_constraintStart_toEndOf="@id/ivWhatsAppScheduleIcon" />
+
+            <TextView
+                android:id="@+id/tvWhatsAppScheduleBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/pill_background"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp"
+                android:text="08:00 – 20:00"
+                android:textColor="@color/emerald_accent"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <TextView
+                android:id="@+id/tvWhatsAppScheduleNote"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Usable throughout the day (8 AM – 8 PM). Outside hours, mindful pause protects sleep."
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                app:layout_constraintTop_toBottomOf="@id/ivWhatsAppScheduleIcon"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/btnLaunchWhatsApp" />
+
+            <Button
+                android:id="@+id/btnLaunchWhatsApp"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:background="@drawable/button_emerald"
+                android:text="Open WhatsApp"
+                android:textColor="@color/white"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:paddingHorizontal="14dp"
+                app:layout_constraintTop_toBottomOf="@id/ivWhatsAppScheduleIcon"
+                app:layout_constraintEnd_toEndOf="parent" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- APP RESTRICTIONS SHORTCUT -->
+        <LinearLayout
+            android:id="@+id/btnManageAllRestrictions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/card_background"
+            android:padding="16dp"
+            android:foreground="?attr/selectableItemBackground">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_shield"
+                app:tint="@color/gold_primary"
+                android:contentDescription="Restrictions" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="14dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="App Restrictions Hub"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Configure timers for all installed apps"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_arrow_back"
+                android:rotation="180"
+                app:tint="@color/text_tertiary" />
+        </LinearLayout>
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

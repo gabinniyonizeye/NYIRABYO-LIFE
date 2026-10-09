@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- NYIRABYO Palette: Deep Obsidian, Noble Gold & Emerald Growth -->
+    <color name="bg_dark">#0B0D11</color>
+    <color name="bg_card">#141720</color>
+    <color name="bg_card_elevated">#1B202B</color>
+    <color name="bg_card_subtle">#10131A</color>
+    <color name="border_subtle">#222733</color>
+    <color name="border_focused">#E5B869</color>
+
+    <!-- Brand Accents -->
+    <color name="gold_primary">#E5B869</color>
+    <color name="gold_dark">#B88E3E</color>
+    <color name="gold_subtle">#2A2315</color>
+    
+    <color name="emerald_accent">#10B981</color>
+    <color name="emerald_dark">#059669</color>
+    <color name="emerald_subtle">#132E25</color>
+
+    <color name="indigo_focus">#6366F1</color>
+    <color name="indigo_subtle">#1E2040</color>
+
+    <color name="rose_alert">#F43F5E</color>
+    <color name="rose_subtle">#33151D</color>
+
+    <!-- Typography -->
+    <color name="text_primary">#F8FAFC</color>
+    <color name="text_secondary">#94A3B8</color>
+    <color name="text_tertiary">#64748B</color>
+    <color name="text_muted">#475569</color>
+
+    <!-- System -->
+    <color name="white">#FFFFFFFF</color>
+    <color name="black">#FF000000</color>
+    <color name="transparent">#00000000</color>
+
+    <color name="status_bar_scrim">#CC0B0D11</color>
+</resources>
