@@ -9,7 +9,7 @@ import androidx.core.content.ContextCompat
 import com.example.nyirabyolife.R
 import com.example.nyirabyolife.data.local.NyirabyoDbHelper
 import com.example.nyirabyolife.data.local.ScriptureRepository
-import com.example.nyirabyolife.data.model.ScriptureVerse
+import com.example.nyirabyolife.data.model.ChristRevelation
 import com.example.nyirabyolife.databinding.ActivityGodFirstBinding
 import com.example.nyirabyolife.databinding.ItemPrayerBinding
 import java.text.SimpleDateFormat
@@ -20,8 +20,8 @@ class GodFirstActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityGodFirstBinding
     private lateinit var dbHelper: NyirabyoDbHelper
-    private var allVerses: List<ScriptureVerse> = emptyList()
-    private var currentVerseIndex = 0
+    private var allRevelations: List<ChristRevelation> = emptyList()
+    private var currentRevelationIndex = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,28 +31,40 @@ class GodFirstActivity : AppCompatActivity() {
         dbHelper = NyirabyoDbHelper.getInstance(this)
         binding.btnBack.setOnClickListener { finish() }
 
-        setupScripture()
+        setupSacredPresenceAnime()
+        setupChristRevelations()
         setupPrayers()
         setupGratitude()
     }
 
-    private fun setupScripture() {
-        allVerses = ScriptureRepository.getAllVerses()
-        val today = ScriptureRepository.getVerseOfTheDay()
-        currentVerseIndex = allVerses.indexOfFirst { it.id == today.id }.coerceAtLeast(0)
-        displayVerse(allVerses[currentVerseIndex])
-
-        binding.btnCycleVerse.setOnClickListener {
-            currentVerseIndex = (currentVerseIndex + 1) % allVerses.size
-            displayVerse(allVerses[currentVerseIndex])
+    private fun setupSacredPresenceAnime() {
+        // Connect the breathing anime animation to live prayer prompts
+        binding.spiritualAuraView.onPhaseChangeListener = { phase ->
+            runOnUiThread {
+                binding.tvBreathPhase.text = phase.text
+                binding.tvBreathPrayer.text = phase.subText
+            }
         }
     }
 
-    private fun displayVerse(verse: ScriptureVerse) {
-        binding.tvThemeBadge.text = verse.theme.uppercase()
-        binding.tvFullVerse.text = "“${verse.text}”"
-        binding.tvFullRef.text = verse.reference
-        binding.tvReflectionPrompt.text = verse.reflectionPrompt
+    private fun setupChristRevelations() {
+        allRevelations = ScriptureRepository.getAllChristRevelations()
+        val today = ScriptureRepository.getChristRevelationOfTheDay()
+        currentRevelationIndex = allRevelations.indexOfFirst { it.id == today.id }.coerceAtLeast(0)
+        displayRevelation(allRevelations[currentRevelationIndex])
+
+        binding.btnCycleRevelation.setOnClickListener {
+            currentRevelationIndex = (currentRevelationIndex + 1) % allRevelations.size
+            displayRevelation(allRevelations[currentRevelationIndex])
+        }
+    }
+
+    private fun displayRevelation(revelation: ChristRevelation) {
+        binding.tvRevelationTitle.text = revelation.title
+        binding.tvFullVerse.text = "“${revelation.scripture}”"
+        binding.tvFullRef.text = revelation.reference
+        binding.tvRevelationInsight.text = revelation.revelation
+        binding.tvPrayerInsight.text = "“${revelation.prayer}”"
     }
 
     private fun setupPrayers() {

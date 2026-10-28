@@ -33,8 +33,11 @@ import com.example.nyirabyolife.ui.godfirst.GodFirstActivity
 import com.example.nyirabyolife.ui.recovery.RecoveryActivity
 import com.example.nyirabyolife.ui.restriction.AppRestrictionsActivity
 import com.example.nyirabyolife.ui.settings.SettingsActivity
+import com.example.nyirabyolife.ui.weekly.WeeklyPlanActivity
 import com.example.nyirabyolife.ui.whatsapp.WhatsAppWindowActivity
+import com.example.nyirabyolife.util.TaskAlarmScheduler
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -95,6 +98,7 @@ class HomeActivity : AppCompatActivity() {
     private fun refreshAllData() {
         loadVerseOfTheDay()
         loadMissions()
+        loadWeeklyPlans()
         loadFavoriteAppsDock()
         updateEscapeRoomStatus()
         updateToolsAndWhatsAppBanner()
@@ -183,15 +187,125 @@ class HomeActivity : AppCompatActivity() {
             promptEditMissions()
         }
 
+        dailyBinding.btnOpenWeeklyPlan.setOnClickListener {
+            startActivity(Intent(this, WeeklyPlanActivity::class.java))
+        }
+
+        dailyBinding.layoutSundayLauncherBadge.setOnClickListener {
+            startActivity(Intent(this, WeeklyPlanActivity::class.java))
+        }
+
         loadVerseOfTheDay()
         loadMissions()
+        loadWeeklyPlans()
     }
 
     private fun loadVerseOfTheDay() {
         val b = slideDailyBinding ?: return
-        val verse = ScriptureRepository.getVerseOfTheDay()
-        b.tvVerseText.text = "“${verse.text}”"
-        b.tvVerseRef.text = verse.reference
+        val revelation = ScriptureRepository.getChristRevelationOfTheDay()
+        b.tvRevelationTitle.text = revelation.title
+        b.tvVerseText.text = "“${revelation.scripture}”"
+        b.tvVerseRef.text = revelation.reference
+    }
+
+    private fun loadWeeklyPlans() {
+        val b = slideDailyBinding ?: return
+        val cal = Calendar.getInstance()
+        val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
+        val week = cal.get(Calendar.WEEK_OF_YEAR)
+        val year = cal.get(Calendar.YEAR)
+
+        // Highlight Sunday planning on Sundays
+        if (dayOfWeek == Calendar.SUNDAY) {
+            b.layoutSundayLauncherBadge.visibility = View.VISIBLE
+        } else {
+            b.layoutSundayLauncherBadge.visibility = View.GONE
+        }
+
+        dbHelper.ensureDefaultSundayWeeklyPlanIfEmpty(week, year)
+        val todayTasks = dbHelper.getWeeklyTasksForDay(dayOfWeek, week, year)
+
+        // Next Alarm indicator
+        val upcomingAlarmTask = todayTasks.firstOrNull { it.isAlarmEnabled && !it.isCompleted }
+        if (upcomingAlarmTask != null) {
+            b.tvNextAlarmBadge.text = "Next: ${upcomingAlarmTask.formattedTime} ⏰"
+            b.tvNextAlarmBadge.setTextColor(ContextCompat.getColor(this, R.color.gold_primary))
+        } else {
+            val completedCount = todayTasks.count { it.isCompleted }
+            b.tvNextAlarmBadge.text = "$completedCount of ${todayTasks.size} done"
+            b.tvNextAlarmBadge.setTextColor(ContextCompat.getColor(this, R.color.emerald_accent))
+        }
+
+        b.layoutWeeklyTasksPreview.removeAllViews()
+        if (todayTasks.isEmpty()) {
+            val emptyTv = TextView(this).apply {
+                text = "No scheduled tasks today. Tap below to plan."
+                setTextColor(ContextCompat.getColor(context, R.color.text_tertiary))
+                textSize = 12f
+                setPadding(0, 4, 0, 4)
+            }
+            b.layoutWeeklyTasksPreview.addView(emptyTv)
+        } else {
+            val inflater = LayoutInflater.from(this)
+            todayTasks.take(3).forEach { task ->
+                val rowView = inflater.inflate(R.layout.item_weekly_plan_task, b.layoutWeeklyTasksPreview, false)
+                val ivCheck = rowView.findViewById<ImageView>(R.id.ivTaskCheck)
+                val tvTitle = rowView.findViewById<TextView>(R.id.tvTaskTitle)
+                val tvTime = rowView.findViewById<TextView>(R.id.tvTaskTime)
+                val btnAlarm = rowView.findViewById<android.widget.ImageButton>(R.id.btnToggleAlarm)
+                val btnDelete = rowView.findViewById<android.widget.ImageButton>(R.id.btnDeleteTask)
+                btnDelete.visibility = View.GONE // Keep launcher view clean
+
+                tvTitle.text = task.title
+                tvTime.text = task.formattedTime
+
+                if (task.isCompleted) {
+                    ivCheck.setImageResource(R.drawable.ic_check_circle)
+                    ivCheck.setColorFilter(ContextCompat.getColor(this, R.color.emerald_accent))
+                    tvTitle.paintFlags = tvTitle.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+                    tvTitle.setTextColor(ContextCompat.getColor(this, R.color.text_tertiary))
+                } else {
+                    ivCheck.setImageResource(R.drawable.ic_circle_outline)
+                    ivCheck.setColorFilter(ContextCompat.getColor(this, R.color.text_tertiary))
+                    tvTitle.paintFlags = tvTitle.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
+                    tvTitle.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
+                }
+
+                ivCheck.setOnClickListener {
+                    val newStatus = !task.isCompleted
+                    dbHelper.updateWeeklyTaskStatus(task.id, newStatus)
+                    if (newStatus) {
+                        TaskAlarmScheduler.cancelTaskAlarm(this, task.id)
+                    } else if (task.isAlarmEnabled) {
+                        TaskAlarmScheduler.scheduleTaskAlarm(this, task.copy(isCompleted = false))
+                    }
+                    loadWeeklyPlans()
+                }
+
+                if (task.isAlarmEnabled) {
+                    btnAlarm.setColorFilter(ContextCompat.getColor(this, R.color.gold_primary))
+                    btnAlarm.alpha = 1.0f
+                } else {
+                    btnAlarm.setColorFilter(ContextCompat.getColor(this, R.color.text_muted))
+                    btnAlarm.alpha = 0.4f
+                }
+
+                btnAlarm.setOnClickListener {
+                    val newAlarm = !task.isAlarmEnabled
+                    dbHelper.toggleWeeklyTaskAlarm(task.id, newAlarm)
+                    if (newAlarm) {
+                        TaskAlarmScheduler.scheduleTaskAlarm(this, task.copy(isAlarmEnabled = true))
+                        Toast.makeText(this, "⏰ Loud Alarm primed for ${task.formattedTime}", Toast.LENGTH_SHORT).show()
+                    } else {
+                        TaskAlarmScheduler.cancelTaskAlarm(this, task.id)
+                        Toast.makeText(this, "Alarm disabled", Toast.LENGTH_SHORT).show()
+                    }
+                    loadWeeklyPlans()
+                }
+
+                b.layoutWeeklyTasksPreview.addView(rowView)
+            }
+        }
     }
 
     private fun getTodayDateString(): String {

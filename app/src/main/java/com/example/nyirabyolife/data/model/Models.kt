@@ -18,6 +18,32 @@ data class ScriptureVerse(
     val reflectionPrompt: String
 )
 
+data class WeeklyPlanTask(
+    val id: Long = 0,
+    val title: String,
+    val dayOfWeek: Int, // Calendar.SUNDAY (1) through Calendar.SATURDAY (7)
+    val timeHour: Int, // 0..23
+    val timeMinute: Int, // 0..59
+    val isAlarmEnabled: Boolean = true,
+    val isCompleted: Boolean = false,
+    val weekOfYear: Int,
+    val year: Int,
+    val createdAt: Long = System.currentTimeMillis()
+) {
+    val formattedTime: String
+        get() = "%02d:%02d".format(timeHour, timeMinute)
+}
+
+data class ChristRevelation(
+    val id: Int,
+    val title: String,
+    val reference: String,
+    val scripture: String,
+    val revelation: String,
+    val prayer: String
+)
+
+
 data class PrayerItem(
     val id: Long = 0,
     val title: String,

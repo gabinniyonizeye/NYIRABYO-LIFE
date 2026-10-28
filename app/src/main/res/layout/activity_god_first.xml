@@ -44,7 +44,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Scripture, Prayer &amp; Gratitude"
+                android:text="Knowing the Father &amp; His Son Jesus Christ"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp" />
         </LinearLayout>
@@ -63,8 +63,9 @@
             android:paddingHorizontal="20dp"
             android:paddingBottom="36dp">
 
-            <!-- Today's Word in Full Detail -->
+            <!-- SACRED PRESENCE: THE SPIRITUAL ANIME & HOLY BREATH AURA -->
             <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/cardSacredPresence"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/card_background"
@@ -73,9 +74,96 @@
                 android:layout_marginBottom="16dp">
 
                 <ImageView
+                    android:id="@+id/ivSparkleHeader"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_sparkle"
+                    app:tint="@color/gold_primary"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    android:contentDescription="Celestial Light" />
+
+                <TextView
+                    android:id="@+id/lblPresenceBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="SACRED PRESENCE • HOLY BREATH"
+                    android:textColor="@color/gold_primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.14"
+                    app:layout_constraintTop_toTopOf="@id/ivSparkleHeader"
+                    app:layout_constraintBottom_toBottomOf="@id/ivSparkleHeader"
+                    app:layout_constraintStart_toEndOf="@id/ivSparkleHeader" />
+
+                <!-- The Animated Spiritual Aura View -->
+                <com.example.nyirabyolife.ui.godfirst.SpiritualAuraView
+                    android:id="@+id/spiritualAuraView"
+                    android:layout_width="match_parent"
+                    android:layout_height="190dp"
+                    android:layout_marginTop="10dp"
+                    app:layout_constraintTop_toBottomOf="@id/lblPresenceBadge"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+                <!-- Breath State Guidance Text -->
+                <LinearLayout
+                    android:id="@+id/boxBreathGuidance"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:background="@drawable/card_background_elevated"
+                    android:padding="12dp"
+                    android:layout_marginTop="10dp"
+                    app:layout_constraintTop_toBottomOf="@id/spiritualAuraView">
+
+                    <TextView
+                        android:id="@+id/tvBreathPhase"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="INHALE"
+                        android:textColor="@color/gold_primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.18" />
+
+                    <TextView
+                        android:id="@+id/tvBreathPrayer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="“Lord Jesus Christ, Son of God…”"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:gravity="center" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="“Be still, and know that I am God.” — Psalm 46:10"
+                        android:textColor="@color/text_tertiary"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- KNOWING GOD & HIS SON JESUS CHRIST -->
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/cardKnowingGodAndSon"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/card_background"
+                android:padding="20dp"
+                android:layout_marginBottom="16dp">
+
+                <ImageView
                     android:id="@+id/ivCrossIcon"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
                     android:src="@drawable/ic_book"
                     app:tint="@color/gold_primary"
                     app:layout_constraintTop_toTopOf="parent"
@@ -86,8 +174,8 @@
                     android:id="@+id/tvThemeBadge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:text="PRIORITIES &amp; PURPOSE"
+                    android:layout_marginStart="8dp"
+                    android:text="KNOWING THE FATHER &amp; THE SON"
                     android:textColor="@color/gold_primary"
                     android:textSize="11sp"
                     android:textStyle="bold"
@@ -96,16 +184,31 @@
                     app:layout_constraintBottom_toBottomOf="@id/ivCrossIcon"
                     app:layout_constraintStart_toEndOf="@id/ivCrossIcon" />
 
+                <!-- Revelation Title -->
+                <TextView
+                    android:id="@+id/tvRevelationTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="The Only True God &amp; Jesus Christ"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    app:layout_constraintTop_toBottomOf="@id/ivCrossIcon"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+                <!-- Scripture Verse -->
                 <TextView
                     android:id="@+id/tvFullVerse"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:text="“Seek first the kingdom of God and his righteousness, and all these things will be added to you.”"
-                    android:textColor="@color/text_primary"
-                    android:textSize="16sp"
-                    android:lineSpacingExtra="5dp"
-                    app:layout_constraintTop_toBottomOf="@id/ivCrossIcon"
+                    android:layout_marginTop="8dp"
+                    android:text="“And this is eternal life, that they know you, the only true God, and Jesus Christ whom you have sent.”"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp"
+                    android:lineSpacingExtra="4dp"
+                    app:layout_constraintTop_toBottomOf="@id/tvRevelationTitle"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent" />
 
@@ -113,20 +216,20 @@
                     android:id="@+id/tvFullRef"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:text="Matthew 6:33"
+                    android:layout_marginTop="6dp"
+                    android:text="John 17:3"
                     android:textColor="@color/gold_primary"
-                    android:textSize="14sp"
+                    android:textSize="13sp"
                     android:textStyle="bold"
                     app:layout_constraintTop_toBottomOf="@id/tvFullVerse"
                     app:layout_constraintStart_toStartOf="parent" />
 
-                <!-- Reflection Prompt Box -->
+                <!-- Divine Revelation Box -->
                 <LinearLayout
-                    android:id="@+id/boxReflection"
+                    android:id="@+id/boxRevelation"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="14dp"
                     android:background="@drawable/card_background_elevated"
                     android:orientation="vertical"
                     android:padding="14dp"
@@ -135,33 +238,64 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="DAILY REFLECTION"
-                        android:textColor="@color/text_secondary"
+                        android:text="REVELATION OF THE FATHER &amp; SON"
+                        android:textColor="@color/gold_primary"
                         android:textSize="10sp"
                         android:textStyle="bold"
                         android:letterSpacing="0.1" />
 
                     <TextView
-                        android:id="@+id/tvReflectionPrompt"
+                        android:id="@+id/tvRevelationInsight"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="What is the single most important action in your day that aligns with God's purpose?"
+                        android:text="Eternal life is not merely an afterlife destination—it is an intimate, living relationship with the Father through His beloved Son. When you seek Jesus, you touch the heart of God."
                         android:textColor="@color/text_primary"
                         android:textSize="13sp"
                         android:lineSpacingExtra="3dp" />
                 </LinearLayout>
 
+                <!-- Prayer to the Father in Jesus' Name Box -->
+                <LinearLayout
+                    android:id="@+id/boxPrayerMeditation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/card_background_elevated"
+                    android:orientation="vertical"
+                    android:padding="14dp"
+                    app:layout_constraintTop_toBottomOf="@id/boxRevelation">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="PRAYER TO THE FATHER IN JESUS' NAME"
+                        android:textColor="@color/emerald_accent"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.1" />
+
+                    <TextView
+                        android:id="@+id/tvPrayerInsight"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="“Heavenly Father, I desire to know You intimately. Lord Jesus Christ, reveal the Father's heart, wisdom, and righteousness to my soul today.”"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:lineSpacingExtra="3dp" />
+                </LinearLayout>
+
                 <Button
-                    android:id="@+id/btnCycleVerse"
+                    android:id="@+id/btnCycleRevelation"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Next Verse →"
+                    android:layout_marginTop="10dp"
+                    android:text="Next Revelation →"
                     android:textColor="@color/gold_primary"
                     android:textSize="12sp"
-                    app:layout_constraintTop_toBottomOf="@id/boxReflection"
+                    app:layout_constraintTop_toBottomOf="@id/boxPrayerMeditation"
                     app:layout_constraintEnd_toEndOf="parent" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
