@@ -48,11 +48,11 @@ class SpiritualAuraView @JvmOverloads constructor(
     private var currentPhase = BreathPhase.INHALE
     var onPhaseChangeListener: ((BreathPhase) -> Unit)? = null
 
-    // Golden Palette
-    private val goldPrimary = Color.parseColor("#E5B869")
-    private val goldBright = Color.parseColor("#FFE8A3")
-    private val goldAura = Color.parseColor("#66E5B869")
-    private val emeraldAccent = Color.parseColor("#10B981")
+    // Dynamic Palette from ThemeHelper
+    private var goldPrimary = Color.parseColor("#E5B869")
+    private var goldBright = Color.parseColor("#FFE8A3")
+    private var goldAura = Color.parseColor("#66E5B869")
+    private var emeraldAccent = Color.parseColor("#10B981")
 
     private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -96,14 +96,14 @@ class SpiritualAuraView @JvmOverloads constructor(
     }
 
     private fun setupAnimator() {
-        // 12-second complete breath cycle: 4s inhale, 2s hold, 4s exhale, 2s rest
+        // 18-second tranquil, reverent breath cycle: 6s inhale, 3s hold/abide, 6s exhale, 3s be still
         animator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 12000L
+            duration = 18000L
             repeatCount = ValueAnimator.INFINITE
             interpolator = AccelerateDecelerateInterpolator()
             addUpdateListener { va ->
                 val fraction = va.animatedFraction
-                // Cycle through the 4 phases
+                // Cycle through the 4 phases calmly
                 val phase = when {
                     fraction < 0.33f -> {
                         breathProgress = fraction / 0.33f
@@ -160,7 +160,7 @@ class SpiritualAuraView @JvmOverloads constructor(
                 Ember(
                     x = Random.nextFloat() * w,
                     y = Random.nextFloat() * h,
-                    speedY = 0.5f + Random.nextFloat() * 1.5f,
+                    speedY = 0.15f + Random.nextFloat() * 0.45f,
                     radius = 2f + Random.nextFloat() * 3.5f,
                     alpha = Random.nextInt(40, 200),
                     maxAlpha = Random.nextInt(120, 230)
@@ -185,6 +185,14 @@ class SpiritualAuraView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        val theme = com.example.nyirabyolife.util.ThemeHelper.getActiveThemeColors(context)
+        goldPrimary = theme.primaryAccent
+        goldBright = theme.primaryAccent
+        val rgb = theme.rgb1
+        goldAura = Color.argb(102, rgb.first, rgb.second, rgb.third)
+        emeraldAccent = theme.secondaryAccent
+        crossPaint.color = goldBright
+
         val cx = width / 2f
         val cy = height / 2f
         val baseRadius = min(width, height) * 0.28f
@@ -226,7 +234,7 @@ class SpiritualAuraView @JvmOverloads constructor(
         val outerDist = radius * (0.85f + breathProgress * 0.25f)
 
         canvas.save()
-        canvas.rotate(rotationAngle * 0.3f, cx, cy)
+        canvas.rotate(rotationAngle * 0.12f, cx, cy)
 
         rayPaint.strokeWidth = 2.5f
         rayPaint.color = goldBright

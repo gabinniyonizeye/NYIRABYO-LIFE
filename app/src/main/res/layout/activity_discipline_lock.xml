@@ -1,40 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:background="@color/bg_dark">
+    android:background="@color/bg_dark"
+    android:paddingHorizontal="20dp"
+    android:paddingTop="20dp"
+    android:paddingBottom="16dp">
 
+    <!-- Ambient Glow Background -->
+    <com.example.nyirabyolife.ui.home.AmbientGlowView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Top Header & Clock Section -->
     <LinearLayout
+        android:id="@+id/layoutLockHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center_horizontal"
-        android:padding="24dp">
+        app:layout_constraintTop_toTopOf="parent">
 
-        <!-- Header Tag -->
         <TextView
+            android:id="@+id/tvLockTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
             android:text="NYIRABYO DISCIPLINE LOCK"
             android:textColor="@color/gold_primary"
-            android:textSize="13sp"
+            android:textSize="10sp"
             android:textStyle="bold"
-            android:letterSpacing="0.2" />
+            android:letterSpacing="0.18" />
 
-        <!-- Big Minimalist Clock -->
         <TextClock
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:format12Hour="hh:mm"
             android:format24Hour="HH:mm"
             android:textColor="@color/text_primary"
-            android:textSize="60sp"
+            android:textSize="56sp"
             android:textStyle="bold"
-            android:letterSpacing="0.02"
-            android:layout_marginTop="8dp" />
+            android:letterSpacing="0.02" />
 
         <TextClock
             android:layout_width="wrap_content"
@@ -44,250 +50,248 @@
             android:textColor="@color/text_secondary"
             android:textSize="13sp"
             android:letterSpacing="0.08"
-            android:textAllCaps="true"
-            android:layout_marginBottom="16dp" />
+            android:textAllCaps="true" />
+    </LinearLayout>
 
-        <!-- ESCAPE ROOM 1-HOUR LOCKDOWN BANNER (Visible when Active) -->
-        <LinearLayout
-            android:id="@+id/cardEscapeRoomBanner"
+    <!-- ESCAPE ROOM BANNER (Visible only when Active) -->
+    <LinearLayout
+        android:id="@+id/cardEscapeRoomBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/card_background_elevated"
+        android:orientation="vertical"
+        android:padding="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="6dp"
+        android:gravity="center"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/layoutLockHeader"
+        app:layout_constraintBottom_toTopOf="@id/cardLockVerse">
+
+        <TextView
+            android:id="@+id/tvEscapeRoomCountdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="60:00 REMAINING"
+            android:textColor="@color/rose_alert"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Escape Room active • Strict lockdown"
+            android:textColor="@color/text_tertiary"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- Scripture Anchor Card -->
+    <LinearLayout
+        android:id="@+id/cardLockVerse"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/card_background"
+        android:orientation="vertical"
+        android:paddingHorizontal="18dp"
+        android:paddingVertical="14dp"
+        android:layout_marginTop="14dp"
+        android:layout_marginBottom="10dp"
+        app:layout_constraintTop_toBottomOf="@id/layoutLockHeader"
+        app:layout_constraintBottom_toTopOf="@id/cardLockMissions">
+
+        <TextView
+            android:id="@+id/tvLockVerseText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/card_background_elevated"
-            android:orientation="vertical"
-            android:padding="16dp"
-            android:layout_marginBottom="18dp"
-            android:gravity="center"
-            android:visibility="gone">
+            android:text="“Seek first the kingdom of God and his righteousness, and all these things will be added to you.”"
+            android:textColor="@color/text_primary"
+            android:textSize="15sp"
+            android:lineSpacingExtra="3dp"
+            android:maxLines="3"
+            android:ellipsize="end"
+            android:gravity="center" />
 
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+        <TextView
+            android:id="@+id/tvLockVerseRef"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:layout_gravity="center"
+            android:text="Matthew 6:33"
+            android:textColor="@color/gold_primary"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:src="@drawable/ic_shield"
-                    app:tint="@color/gold_primary" />
+    <!-- Today's 3 Missions Priorities -->
+    <LinearLayout
+        android:id="@+id/cardLockMissions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/card_background_elevated"
+        android:orientation="vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="12dp"
+        android:layout_marginBottom="12dp"
+        app:layout_constraintBottom_toTopOf="@id/layoutLockActions">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:text="ESCAPE ROOM TOTAL LOCKDOWN"
-                    android:textColor="@color/gold_primary"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.1" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/tvEscapeRoomCountdown"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="60:00 REMAINING"
-                android:textColor="@color/white"
-                android:textSize="22sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.05" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="6dp">
 
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="All apps shut • Phone calls permitted"
+                android:layout_weight="1"
+                android:text="TODAY'S MISSION"
                 android:textColor="@color/text_tertiary"
-                android:textSize="11sp" />
-        </LinearLayout>
-
-        <!-- Scripture Anchor Card -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/card_background"
-            android:orientation="vertical"
-            android:padding="18dp"
-            android:layout_marginBottom="20dp">
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.1" />
 
             <TextView
-                android:id="@+id/tvLockVerseText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="“Seek first the kingdom of God and his righteousness, and all these things will be added to you.”"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp"
-                android:lineSpacingExtra="4dp"
-                android:gravity="center" />
-
-            <TextView
-                android:id="@+id/tvLockVerseRef"
+                android:id="@+id/tvLockMissionSummary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:layout_gravity="center"
-                android:text="Matthew 6:33"
-                android:textColor="@color/gold_primary"
+                android:text="0 of 3 complete"
+                android:textColor="@color/emerald_accent"
                 android:textSize="12sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Today's 3 Missions Priorities -->
+        <!-- Mission 1 -->
         <LinearLayout
+            android:id="@+id/rowLockMission1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/card_background_elevated"
-            android:orientation="vertical"
-            android:padding="18dp"
-            android:layout_marginBottom="24dp">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingVertical="5dp">
 
-            <LinearLayout
+            <ImageView
+                android:id="@+id/ivLockCheck1"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_circle_outline"
+                app:tint="@color/text_tertiary" />
+
+            <TextView
+                android:id="@+id/tvLockMissionTitle1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="12dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="TODAY'S MISSION"
-                    android:textColor="@color/text_tertiary"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.1" />
-
-                <TextView
-                    android:id="@+id/tvLockMissionSummary"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0 of 3 complete"
-                    android:textColor="@color/emerald_accent"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <!-- Mission 1 -->
-            <LinearLayout
-                android:id="@+id/rowLockMission1"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingVertical="6dp">
-
-                <ImageView
-                    android:id="@+id/ivLockCheck1"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:src="@drawable/ic_circle_outline"
-                    app:tint="@color/text_tertiary" />
-
-                <TextView
-                    android:id="@+id/tvLockMissionTitle1"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:text="Pray and read Scripture"
-                    android:textColor="@color/text_primary"
-                    android:textSize="13sp" />
-            </LinearLayout>
-
-            <!-- Mission 2 -->
-            <LinearLayout
-                android:id="@+id/rowLockMission2"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingVertical="6dp">
-
-                <ImageView
-                    android:id="@+id/ivLockCheck2"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:src="@drawable/ic_circle_outline"
-                    app:tint="@color/text_tertiary" />
-
-                <TextView
-                    android:id="@+id/tvLockMissionTitle2"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:text="Build my future — coding"
-                    android:textColor="@color/text_primary"
-                    android:textSize="13sp" />
-            </LinearLayout>
-
-            <!-- Mission 3 -->
-            <LinearLayout
-                android:id="@+id/rowLockMission3"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingVertical="6dp">
-
-                <ImageView
-                    android:id="@+id/ivLockCheck3"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:src="@drawable/ic_circle_outline"
-                    app:tint="@color/text_tertiary" />
-
-                <TextView
-                    android:id="@+id/tvLockMissionTitle3"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:text="Train my body — basketball"
-                    android:textColor="@color/text_primary"
-                    android:textSize="13sp" />
-            </LinearLayout>
-
+                android:layout_marginStart="8dp"
+                android:text="Wake Up at 7:00"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp" />
         </LinearLayout>
+
+        <!-- Mission 2 -->
+        <LinearLayout
+            android:id="@+id/rowLockMission2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingVertical="5dp">
+
+            <ImageView
+                android:id="@+id/ivLockCheck2"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_circle_outline"
+                app:tint="@color/text_tertiary" />
+
+            <TextView
+                android:id="@+id/tvLockMissionTitle2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="Pray &amp; Scripture at 7:10"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- Mission 3 -->
+        <LinearLayout
+            android:id="@+id/rowLockMission3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingVertical="5dp">
+
+            <ImageView
+                android:id="@+id/ivLockCheck3"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_circle_outline"
+                app:tint="@color/text_tertiary" />
+
+            <TextView
+                android:id="@+id/tvLockMissionTitle3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="BedTime 22:00"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Bottom Actions Container -->
+    <LinearLayout
+        android:id="@+id/layoutLockActions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent">
 
         <!-- Unlock Button -->
         <Button
             android:id="@+id/btnUnlock"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="46dp"
             android:background="@drawable/button_gold"
             android:text="Unlock Device"
             android:textColor="@color/bg_dark"
-            android:textSize="15sp"
+            android:textSize="14sp"
             android:textStyle="bold"
             android:letterSpacing="0.05"
-            android:layout_marginBottom="12dp" />
+            android:layout_marginBottom="8dp" />
 
-        <!-- Phone & Calls Button -->
-        <Button
-            android:id="@+id/btnLockPhone"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        <!-- Phone & Emergency Urge Row (Side-by-Side saves 48dp of height) -->
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:text="Phone / Calls"
-            android:textColor="@color/emerald_accent"
-            app:strokeColor="@color/emerald_accent"
-            app:icon="@drawable/ic_phone"
-            app:iconTint="@color/emerald_accent"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.05"
-            android:layout_marginBottom="12dp" />
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
 
-        <!-- Emergency Urge Protocol -->
-        <Button
-            android:id="@+id/btnLockUrge"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="match_parent"
-            android:layout_height="44dp"
-            android:text="Emergency Urge Protocol →"
-            android:textColor="@color/rose_alert"
-            android:textSize="13sp"
-            android:layout_marginBottom="16dp" />
+            <Button
+                android:id="@+id/btnLockPhone"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="Calls 📞"
+                android:textColor="@color/emerald_accent"
+                app:strokeColor="@color/emerald_accent"
+                android:textSize="12sp"
+                android:textStyle="bold" />
 
+            <Button
+                android:id="@+id/btnLockUrge"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1.2"
+                android:layout_marginStart="4dp"
+                android:text="Urge Protocol 🛡️"
+                android:textColor="@color/rose_alert"
+                android:textSize="11sp" />
+        </LinearLayout>
     </LinearLayout>
-</ScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

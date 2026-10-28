@@ -27,7 +27,9 @@ import com.example.nyirabyolife.data.model.Mission
 import com.example.nyirabyolife.databinding.ActivityDisciplineLockBinding
 import com.example.nyirabyolife.security.RecoveryAuthManager
 import com.example.nyirabyolife.ui.recovery.UrgeCheckInActivity
+import com.example.nyirabyolife.util.ThemeHelper
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -75,8 +77,11 @@ class DisciplineLockActivity : AppCompatActivity() {
             }
         })
 
+        applyThemeColors()
+
         loadVerse()
         loadMissions()
+
         setupEscapeRoomOrNormalUnlock()
 
         authManager = RecoveryAuthManager(
@@ -107,16 +112,34 @@ class DisciplineLockActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        applyThemeColors()
         setupEscapeRoomOrNormalUnlock()
         loadMissions()
     }
 
+    private fun applyThemeColors() {
+        val themeColors = ThemeHelper.getActiveThemeColors(this)
+        binding.tvLockTitle.setTextColor(themeColors.primaryAccent)
+        binding.tvLockVerseRef.setTextColor(themeColors.primaryAccent)
+        binding.tvLockMissionSummary.setTextColor(themeColors.secondaryAccent)
+
+        binding.cardLockVerse.background = ThemeHelper.createCardDrawable(this, themeColors, isElevated = true)
+        binding.cardLockMissions.background = ThemeHelper.createCardDrawable(this, themeColors, isElevated = false)
+        binding.btnLockPhone.background = ThemeHelper.createPillDrawable(this, themeColors)
+        binding.btnLockPhone.setTextColor(themeColors.primaryAccent)
+        binding.btnLockUrge.background = ThemeHelper.createPillDrawable(this, themeColors)
+        binding.btnLockUrge.setTextColor(themeColors.secondaryAccent)
+    }
+
     private fun setupEscapeRoomOrNormalUnlock() {
+        val themeColors = ThemeHelper.getActiveThemeColors(this)
         if (prefs.isEscapeRoomActive()) {
             binding.cardEscapeRoomBanner.visibility = View.VISIBLE
+            binding.cardEscapeRoomBanner.background = ThemeHelper.createCardDrawable(this, themeColors, isElevated = true)
             binding.btnUnlock.text = "Strict Lockdown (Escape Room Active)"
-            binding.btnUnlock.setBackgroundResource(R.drawable.card_background_elevated)
-            binding.btnUnlock.setTextColor(ContextCompat.getColor(this, R.color.text_tertiary))
+            val lockPill = ThemeHelper.createPillDrawable(this, themeColors)
+            binding.btnUnlock.background = lockPill
+            binding.btnUnlock.setTextColor(ContextCompat.getColor(this, R.color.rose_alert))
 
             val remainingSec = prefs.getEscapeRoomRemainingSeconds()
             startEscapeRoomCountdown(remainingSec * 1000L)
@@ -125,14 +148,16 @@ class DisciplineLockActivity : AppCompatActivity() {
                 val remMins = (prefs.getEscapeRoomRemainingSeconds() / 60) + 1
                 Toast.makeText(
                     this,
-                    "Escape Room active (${remMins}m remaining). Only incoming calls allowed.",
+                    "Escape Room active (${remMins}m remaining). Only calls allowed.",
                     Toast.LENGTH_SHORT
                 ).show()
             }
         } else {
             binding.cardEscapeRoomBanner.visibility = View.GONE
             binding.btnUnlock.text = "Unlock Device"
-            binding.btnUnlock.setBackgroundResource(R.drawable.button_gold)
+            val unlockPill = ThemeHelper.createPillDrawable(this, themeColors)
+            unlockPill.setColor(themeColors.primaryAccent)
+            binding.btnUnlock.background = unlockPill
             binding.btnUnlock.setTextColor(ContextCompat.getColor(this, R.color.bg_dark))
             binding.btnUnlock.setOnClickListener {
                 handleUnlock()
@@ -170,20 +195,37 @@ class DisciplineLockActivity : AppCompatActivity() {
     }
 
     private fun loadMissions() {
+        val themeColors = ThemeHelper.getActiveThemeColors(this)
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        currentMissions = dbHelper.ensureDefaultMissionsIfEmpty(today)
+        val cal = Calendar.getInstance()
+        val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
+        val week = cal.get(Calendar.WEEK_OF_YEAR)
+        val year = cal.get(Calendar.YEAR)
+        currentMissions = dbHelper.getSynchronizedDailyMissions(today, dayOfWeek, week, year)
 
         val completed = currentMissions.count { it.isCompleted }
         binding.tvLockMissionSummary.text = "$completed of ${currentMissions.size} complete"
+        binding.tvLockMissionSummary.setTextColor(themeColors.secondaryAccent)
 
         if (currentMissions.isNotEmpty()) {
+            binding.rowLockMission1.visibility = android.view.View.VISIBLE
             bindMissionRow(currentMissions[0], binding.tvLockMissionTitle1, binding.ivLockCheck1, binding.rowLockMission1)
+        } else {
+            binding.rowLockMission1.visibility = android.view.View.GONE
         }
+
         if (currentMissions.size > 1) {
+            binding.rowLockMission2.visibility = android.view.View.VISIBLE
             bindMissionRow(currentMissions[1], binding.tvLockMissionTitle2, binding.ivLockCheck2, binding.rowLockMission2)
+        } else {
+            binding.rowLockMission2.visibility = android.view.View.GONE
         }
+
         if (currentMissions.size > 2) {
+            binding.rowLockMission3.visibility = android.view.View.VISIBLE
             bindMissionRow(currentMissions[2], binding.tvLockMissionTitle3, binding.ivLockCheck3, binding.rowLockMission3)
+        } else {
+            binding.rowLockMission3.visibility = android.view.View.GONE
         }
     }
 
@@ -193,11 +235,12 @@ class DisciplineLockActivity : AppCompatActivity() {
         ivCheck: ImageView,
         rowLayout: LinearLayout
     ) {
+        val themeColors = ThemeHelper.getActiveThemeColors(this)
         tvTitle.text = mission.title
 
         if (mission.isCompleted) {
             ivCheck.setImageResource(R.drawable.ic_check_circle)
-            ivCheck.setColorFilter(ContextCompat.getColor(this, R.color.emerald_accent))
+            ivCheck.setColorFilter(themeColors.secondaryAccent)
             tvTitle.paintFlags = tvTitle.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
             tvTitle.setTextColor(ContextCompat.getColor(this, R.color.text_tertiary))
         } else {

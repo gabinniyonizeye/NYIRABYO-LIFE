@@ -7,6 +7,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.nyirabyolife.R
 import com.example.nyirabyolife.data.model.AppItem
 import com.example.nyirabyolife.databinding.ItemAppBinding
+import com.example.nyirabyolife.util.ThemeHelper
 
 class AppDrawerAdapter(
     private var allApps: List<AppItem>,
@@ -55,14 +56,15 @@ class AppDrawerAdapter(
                 binding.ivAppIcon.setImageResource(R.drawable.ic_apps)
             }
 
-            val pinColor = if (app.isFavorite) R.color.gold_primary else R.color.text_tertiary
-            binding.ivPinFavorite.setColorFilter(ContextCompat.getColor(binding.root.context, pinColor))
+            val theme = ThemeHelper.getActiveThemeColors(binding.root.context)
+            val pinColor = if (app.isFavorite) theme.primaryAccent else ContextCompat.getColor(binding.root.context, R.color.text_tertiary)
+            binding.ivPinFavorite.setColorFilter(pinColor)
 
             binding.root.setOnClickListener { onAppClick(app) }
             binding.ivPinFavorite.setOnClickListener {
                 app.isFavorite = !app.isFavorite
-                val newColor = if (app.isFavorite) R.color.gold_primary else R.color.text_tertiary
-                binding.ivPinFavorite.setColorFilter(ContextCompat.getColor(binding.root.context, newColor))
+                val newColor = if (app.isFavorite) theme.primaryAccent else ContextCompat.getColor(binding.root.context, R.color.text_tertiary)
+                binding.ivPinFavorite.setColorFilter(newColor)
                 onPinClick(app)
             }
         }

@@ -44,6 +44,14 @@ class UrgeCheckInActivity : AppCompatActivity() {
         binding = ActivityUrgeCheckinBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        val theme = com.example.nyirabyolife.util.ThemeHelper.getActiveThemeColors(this)
+        binding.btnBack.background = com.example.nyirabyolife.util.ThemeHelper.createPillDrawable(this, theme)
+        binding.boxBreathingContainer.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, theme, isElevated = true)
+        val victoryPill = com.example.nyirabyolife.util.ThemeHelper.createPillDrawable(this, theme)
+        victoryPill.setColor(theme.primaryAccent)
+        binding.btnLogVictory.background = victoryPill
+        binding.btnLogVictory.setTextColor(ContextCompat.getColor(this, R.color.bg_dark))
+
         binding.btnBack.setOnClickListener { finish() }
 
         startBreathing()

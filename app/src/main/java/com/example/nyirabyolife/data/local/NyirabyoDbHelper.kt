@@ -10,7 +10,10 @@ import com.example.nyirabyolife.data.model.Mission
 import com.example.nyirabyolife.data.model.PrayerItem
 import com.example.nyirabyolife.data.model.UrgeLog
 import com.example.nyirabyolife.data.model.WeeklyPlanTask
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -18,7 +21,7 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
 
     companion object {
         const val DATABASE_NAME = "nyirabyo_life.db"
-        const val DATABASE_VERSION = 2
+        const val DATABASE_VERSION = 3
 
         @Volatile
         private var instance: NyirabyoDbHelper? = null
@@ -30,6 +33,19 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
         }
     }
 
+    override fun onOpen(db: SQLiteDatabase) {
+        super.onOpen(db)
+        ensureColumnsExist(db)
+    }
+
+    private fun ensureColumnsExist(db: SQLiteDatabase) {
+        try { db.execSQL("ALTER TABLE weekly_plans ADD COLUMN task_mode TEXT DEFAULT 'NORMAL'") } catch (_: Exception) {}
+        try { db.execSQL("ALTER TABLE weekly_plans ADD COLUMN is_daily INTEGER DEFAULT 0") } catch (_: Exception) {}
+        try { db.execSQL("ALTER TABLE missions ADD COLUMN time_hour INTEGER NOT NULL DEFAULT 0") } catch (_: Exception) {}
+        try { db.execSQL("ALTER TABLE missions ADD COLUMN time_minute INTEGER NOT NULL DEFAULT 0") } catch (_: Exception) {}
+        try { db.execSQL("ALTER TABLE missions ADD COLUMN task_mode TEXT DEFAULT 'NORMAL'") } catch (_: Exception) {}
+    }
+
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("""
             CREATE TABLE missions (
@@ -37,7 +53,10 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
                 title TEXT NOT NULL,
                 is_completed INTEGER NOT NULL DEFAULT 0,
                 date TEXT NOT NULL,
-                order_index INTEGER NOT NULL DEFAULT 0
+                order_index INTEGER NOT NULL DEFAULT 0,
+                time_hour INTEGER NOT NULL DEFAULT 0,
+                time_minute INTEGER NOT NULL DEFAULT 0,
+                task_mode TEXT DEFAULT 'NORMAL'
             )
         """.trimIndent())
 
@@ -91,28 +110,15 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
                 is_completed INTEGER NOT NULL DEFAULT 0,
                 week_of_year INTEGER NOT NULL,
                 year INTEGER NOT NULL,
-                created_at INTEGER NOT NULL
+                created_at INTEGER NOT NULL,
+                task_mode TEXT DEFAULT 'NORMAL',
+                is_daily INTEGER DEFAULT 0
             )
         """.trimIndent())
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        if (oldVersion < 2) {
-            db.execSQL("""
-                CREATE TABLE IF NOT EXISTS weekly_plans (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT NOT NULL,
-                    day_of_week INTEGER NOT NULL,
-                    time_hour INTEGER NOT NULL,
-                    time_minute INTEGER NOT NULL,
-                    is_alarm_enabled INTEGER NOT NULL DEFAULT 1,
-                    is_completed INTEGER NOT NULL DEFAULT 0,
-                    week_of_year INTEGER NOT NULL,
-                    year INTEGER NOT NULL,
-                    created_at INTEGER NOT NULL
-                )
-            """.trimIndent())
-        }
+        ensureColumnsExist(db)
     }
 
     // --- MISSIONS ---
@@ -126,7 +132,7 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
             arrayOf(date),
             null,
             null,
-            "order_index ASC"
+            "time_hour ASC, time_minute ASC, order_index ASC"
         )
         cursor.use {
             while (it.moveToNext()) {
@@ -134,10 +140,131 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
                 val title = it.getString(it.getColumnIndexOrThrow("title"))
                 val completed = it.getInt(it.getColumnIndexOrThrow("is_completed")) == 1
                 val order = it.getInt(it.getColumnIndexOrThrow("order_index"))
-                list.add(Mission(id = id, title = title, isCompleted = completed, date = date, orderIndex = order))
+                val hIdx = it.getColumnIndex("time_hour")
+                val hour = if (hIdx != -1) it.getInt(hIdx) else 0
+                val mIdx = it.getColumnIndex("time_minute")
+                val min = if (mIdx != -1) it.getInt(mIdx) else 0
+                val modeIdx = it.getColumnIndex("task_mode")
+                val mode = if (modeIdx != -1) it.getString(modeIdx) ?: "NORMAL" else "NORMAL"
+                list.add(Mission(id = id, title = title, isCompleted = completed, date = date, orderIndex = order, timeHour = hour, timeMinute = min, taskMode = mode))
             }
         }
         return list
+    }
+
+    fun getMissionById(id: Long): Mission? {
+        val db = readableDatabase
+        val cursor = db.query("missions", null, "id = ?", arrayOf(id.toString()), null, null, null)
+        cursor.use {
+            if (it.moveToFirst()) {
+                val mId = it.getLong(it.getColumnIndexOrThrow("id"))
+                val title = it.getString(it.getColumnIndexOrThrow("title"))
+                val completed = it.getInt(it.getColumnIndexOrThrow("is_completed")) == 1
+                val date = it.getString(it.getColumnIndexOrThrow("date"))
+                val order = it.getInt(it.getColumnIndexOrThrow("order_index"))
+                val hIdx = it.getColumnIndex("time_hour")
+                val hour = if (hIdx != -1) it.getInt(hIdx) else 0
+                val mIdx = it.getColumnIndex("time_minute")
+                val min = if (mIdx != -1) it.getInt(mIdx) else 0
+                val modeIdx = it.getColumnIndex("task_mode")
+                val mode = if (modeIdx != -1) it.getString(modeIdx) ?: "NORMAL" else "NORMAL"
+                return Mission(id = mId, title = title, isCompleted = completed, date = date, orderIndex = order, timeHour = hour, timeMinute = min, taskMode = mode)
+            }
+        }
+        return null
+    }
+
+    fun ensureFoundationTasksForDay(dayOfWeek: Int, weekOfYear: Int, year: Int) {
+        val tasks = getWeeklyTasksForDay(dayOfWeek, weekOfYear, year)
+        val titles = tasks.map { it.title.trim().lowercase() }.toSet()
+
+        if (!titles.any { it.contains("wake up") }) {
+            addWeeklyTask(
+                WeeklyPlanTask(
+                    title = "Wake Up at 7:00",
+                    dayOfWeek = dayOfWeek,
+                    timeHour = 7,
+                    timeMinute = 0,
+                    isAlarmEnabled = true,
+                    weekOfYear = weekOfYear,
+                    year = year,
+                    taskMode = "NORMAL",
+                    isDaily = true
+                )
+            )
+        }
+
+        if (!titles.any { it.contains("pray") || it.contains("scripture") }) {
+            addWeeklyTask(
+                WeeklyPlanTask(
+                    title = "Pray & Scripture at 7:10",
+                    dayOfWeek = dayOfWeek,
+                    timeHour = 7,
+                    timeMinute = 10,
+                    isAlarmEnabled = true,
+                    weekOfYear = weekOfYear,
+                    year = year,
+                    taskMode = "MEDITATION",
+                    isDaily = true
+                )
+            )
+        }
+
+        if (!titles.any { it.contains("bedtime") }) {
+            addWeeklyTask(
+                WeeklyPlanTask(
+                    title = "BedTime 22:00",
+                    dayOfWeek = dayOfWeek,
+                    timeHour = 22,
+                    timeMinute = 0,
+                    isAlarmEnabled = true,
+                    weekOfYear = weekOfYear,
+                    year = year,
+                    taskMode = "BEDTIME",
+                    isDaily = true
+                )
+            )
+        }
+    }
+
+    fun getSynchronizedDailyMissions(date: String, dayOfWeek: Int, weekOfYear: Int, year: Int): List<Mission> {
+        ensureDefaultSundayWeeklyPlanIfEmpty(weekOfYear, year)
+        ensureFoundationTasksForDay(dayOfWeek, weekOfYear, year)
+
+        // Strict rule: arrange tasks chronologically by time (first to come first on the list)
+        val weeklyTasks = getWeeklyTasksForDay(dayOfWeek, weekOfYear, year)
+            .sortedWith(compareBy({ it.timeHour }, { it.timeMinute }))
+
+        val db = writableDatabase
+
+        // Synchronize and remove legacy collisions
+        db.beginTransaction()
+        try {
+            val existingMissions = getMissionsForDate(date)
+            val completedMap = existingMissions.associate { it.title.trim().lowercase() to it.isCompleted }
+
+            // Clear legacy stale rows for today so no collisions exist
+            db.delete("missions", "date = ?", arrayOf(date))
+
+            weeklyTasks.forEachIndexed { index, task ->
+                val wasCompleted = completedMap[task.title.trim().lowercase()] ?: task.isCompleted
+                val values = ContentValues().apply {
+                    put("title", task.title)
+                    put("is_completed", if (wasCompleted) 1 else 0)
+                    put("date", date)
+                    put("order_index", index)
+                    put("time_hour", task.timeHour)
+                    put("time_minute", task.timeMinute)
+                    put("task_mode", task.taskMode)
+                }
+                db.insert("missions", null, values)
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+
+        return getMissionsForDate(date)
     }
 
     fun ensureDefaultMissionsIfEmpty(date: String): List<Mission> {
@@ -174,6 +301,26 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
             put("is_completed", if (completed) 1 else 0)
         }
         db.update("missions", values, "id = ?", arrayOf(id.toString()))
+
+        // Synchronize with weekly_plans table for today if matching
+        val mission = getMissionById(id)
+        if (mission != null) {
+            val cal = Calendar.getInstance()
+            val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
+            val weekOfYear = cal.get(Calendar.WEEK_OF_YEAR)
+            val year = cal.get(Calendar.YEAR)
+
+            val weeklyTasks = getWeeklyTasksForDay(dayOfWeek, weekOfYear, year)
+            val match = weeklyTasks.find { it.title.trim().equals(mission.title.trim(), ignoreCase = true) }
+                ?: weeklyTasks.getOrNull(mission.orderIndex)
+
+            if (match != null && match.isCompleted != completed) {
+                val tValues = ContentValues().apply {
+                    put("is_completed", if (completed) 1 else 0)
+                }
+                db.update("weekly_plans", tValues, "id = ?", arrayOf(match.id.toString()))
+            }
+        }
     }
 
     fun updateMissionTitle(id: Long, newTitle: String) {
@@ -184,13 +331,16 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
         db.update("missions", values, "id = ?", arrayOf(id.toString()))
     }
 
-    fun saveCustomMission(date: String, title: String, orderIndex: Int): Long {
+    fun saveCustomMission(date: String, title: String, orderIndex: Int, timeHour: Int = 0, timeMinute: Int = 0, taskMode: String = "NORMAL"): Long {
         val db = writableDatabase
         val values = ContentValues().apply {
             put("title", title)
             put("is_completed", 0)
             put("date", date)
             put("order_index", orderIndex)
+            put("time_hour", timeHour)
+            put("time_minute", timeMinute)
+            put("task_mode", taskMode)
         }
         return db.insert("missions", null, values)
     }
@@ -453,14 +603,70 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
             put("week_of_year", task.weekOfYear)
             put("year", task.year)
             put("created_at", System.currentTimeMillis())
+            put("task_mode", task.taskMode)
+            put("is_daily", if (task.isDaily) 1 else 0)
         }
-        return db.insert("weekly_plans", null, values)
+        val newId = db.insert("weekly_plans", null, values)
+
+        // If added for today, synchronize into daily missions
+        val cal = Calendar.getInstance()
+        if (task.dayOfWeek == cal.get(Calendar.DAY_OF_WEEK) &&
+            task.weekOfYear == cal.get(Calendar.WEEK_OF_YEAR) &&
+            task.year == cal.get(Calendar.YEAR)) {
+            val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            val existing = getMissionsForDate(todayDate)
+            saveCustomMission(
+                date = todayDate,
+                title = task.title,
+                orderIndex = existing.size,
+                timeHour = task.timeHour,
+                timeMinute = task.timeMinute,
+                taskMode = task.taskMode
+            )
+        }
+        return newId
+    }
+
+    fun addDailyRecurringTask(task: WeeklyPlanTask): List<Long> {
+        val ids = mutableListOf<Long>()
+        for (day in Calendar.SUNDAY..Calendar.SATURDAY) {
+            val dailyTask = task.copy(dayOfWeek = day, isDaily = true)
+            ids.add(addWeeklyTask(dailyTask))
+        }
+        return ids
     }
 
     fun updateWeeklyTaskStatus(id: Long, isCompleted: Boolean) {
         val db = writableDatabase
         val values = ContentValues().apply {
             put("is_completed", if (isCompleted) 1 else 0)
+        }
+        db.update("weekly_plans", values, "id = ?", arrayOf(id.toString()))
+
+        // Synchronize with missions table for today
+        val task = getWeeklyTaskById(id)
+        if (task != null) {
+            val cal = Calendar.getInstance()
+            if (task.dayOfWeek == cal.get(Calendar.DAY_OF_WEEK) &&
+                task.weekOfYear == cal.get(Calendar.WEEK_OF_YEAR) &&
+                task.year == cal.get(Calendar.YEAR)) {
+                val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                val missions = getMissionsForDate(todayDate)
+                val match = missions.find { it.title.trim().equals(task.title.trim(), ignoreCase = true) }
+                if (match != null && match.isCompleted != isCompleted) {
+                    val mValues = ContentValues().apply {
+                        put("is_completed", if (isCompleted) 1 else 0)
+                    }
+                    db.update("missions", mValues, "id = ?", arrayOf(match.id.toString()))
+                }
+            }
+        }
+    }
+
+    fun updateWeeklyTaskTitle(id: Long, newTitle: String) {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put("title", newTitle)
         }
         db.update("weekly_plans", values, "id = ?", arrayOf(id.toString()))
     }
@@ -474,10 +680,26 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
     }
 
     fun deleteWeeklyTask(id: Long) {
+        val task = getWeeklyTaskById(id)
         writableDatabase.delete("weekly_plans", "id = ?", arrayOf(id.toString()))
+
+        if (task != null) {
+            val cal = Calendar.getInstance()
+            if (task.dayOfWeek == cal.get(Calendar.DAY_OF_WEEK) &&
+                task.weekOfYear == cal.get(Calendar.WEEK_OF_YEAR) &&
+                task.year == cal.get(Calendar.YEAR)) {
+                val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                writableDatabase.delete("missions", "date = ? AND title = ?", arrayOf(todayDate, task.title))
+            }
+        }
     }
 
     private fun cursorToWeeklyTask(cursor: android.database.Cursor): WeeklyPlanTask {
+        val modeIdx = cursor.getColumnIndex("task_mode")
+        val taskMode = if (modeIdx != -1) cursor.getString(modeIdx) ?: "NORMAL" else "NORMAL"
+        val dailyIdx = cursor.getColumnIndex("is_daily")
+        val isDaily = if (dailyIdx != -1) cursor.getInt(dailyIdx) == 1 else false
+
         return WeeklyPlanTask(
             id = cursor.getLong(cursor.getColumnIndexOrThrow("id")),
             title = cursor.getString(cursor.getColumnIndexOrThrow("title")),
@@ -488,42 +710,51 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
             isCompleted = cursor.getInt(cursor.getColumnIndexOrThrow("is_completed")) == 1,
             weekOfYear = cursor.getInt(cursor.getColumnIndexOrThrow("week_of_year")),
             year = cursor.getInt(cursor.getColumnIndexOrThrow("year")),
-            createdAt = cursor.getLong(cursor.getColumnIndexOrThrow("created_at"))
+            createdAt = cursor.getLong(cursor.getColumnIndexOrThrow("created_at")),
+            taskMode = taskMode,
+            isDaily = isDaily
         )
     }
 
     fun ensureDefaultSundayWeeklyPlanIfEmpty(weekOfYear: Int, year: Int): List<WeeklyPlanTask> {
         val existing = getWeeklyTasksForWeek(weekOfYear, year)
-        if (existing.isNotEmpty()) return existing
+        if (existing.isNotEmpty()) {
+            // Also ensure foundational tasks exist for every day of the week
+            for (day in Calendar.SUNDAY..Calendar.SATURDAY) {
+                ensureFoundationTasksForDay(day, weekOfYear, year)
+            }
+            return getWeeklyTasksForWeek(weekOfYear, year)
+        }
 
+        // 1. Seed 3 foundational tasks for all 7 days
+        for (day in Calendar.SUNDAY..Calendar.SATURDAY) {
+            ensureFoundationTasksForDay(day, weekOfYear, year)
+        }
+
+        // 2. Add daytime work / study / rest presets
         val defaults = listOf(
             // SUNDAY
-            WeeklyPlanTask(title = "Sunday Service & Deep Prayer with God", dayOfWeek = Calendar.SUNDAY, timeHour = 9, timeMinute = 0, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year),
-            WeeklyPlanTask(title = "Sunday Weekly Review & Goal Setting with God", dayOfWeek = Calendar.SUNDAY, timeHour = 16, timeMinute = 0, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year),
+            WeeklyPlanTask(title = "Sunday Service & Deep Prayer with God", dayOfWeek = Calendar.SUNDAY, timeHour = 9, timeMinute = 0, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year, taskMode = "MEDITATION"),
+            WeeklyPlanTask(title = "Sunday Weekly Review & Goal Setting with God", dayOfWeek = Calendar.SUNDAY, timeHour = 16, timeMinute = 0, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year, taskMode = "STUDY_FOCUS"),
 
             // MONDAY
-            WeeklyPlanTask(title = "Morning Devotional: Knowing God & His Son", dayOfWeek = Calendar.MONDAY, timeHour = 7, timeMinute = 0, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year),
-            WeeklyPlanTask(title = "Deep Coding Work: High Focus Session", dayOfWeek = Calendar.MONDAY, timeHour = 9, timeMinute = 30, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year),
-            WeeklyPlanTask(title = "Physical Training: Basketball & Fitness", dayOfWeek = Calendar.MONDAY, timeHour = 17, timeMinute = 30, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year),
+            WeeklyPlanTask(title = "Deep Coding Work: High Focus Session", dayOfWeek = Calendar.MONDAY, timeHour = 9, timeMinute = 30, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year, taskMode = "STUDY_FOCUS"),
+            WeeklyPlanTask(title = "Physical Training: Basketball & Fitness", dayOfWeek = Calendar.MONDAY, timeHour = 17, timeMinute = 30, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year, taskMode = "NORMAL"),
 
             // TUESDAY
-            WeeklyPlanTask(title = "Morning Devotional & Prayer Fellowship", dayOfWeek = Calendar.TUESDAY, timeHour = 7, timeMinute = 0, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year),
-            WeeklyPlanTask(title = "Coding & System Architecture Mastery", dayOfWeek = Calendar.TUESDAY, timeHour = 9, timeMinute = 30, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year),
+            WeeklyPlanTask(title = "Coding & System Architecture Mastery", dayOfWeek = Calendar.TUESDAY, timeHour = 9, timeMinute = 30, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year, taskMode = "STUDY_FOCUS"),
 
             // WEDNESDAY
-            WeeklyPlanTask(title = "Morning Devotional & Abiding in Christ", dayOfWeek = Calendar.WEDNESDAY, timeHour = 7, timeMinute = 0, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year),
-            WeeklyPlanTask(title = "Mid-Week Basketball & Athletic Conditioning", dayOfWeek = Calendar.WEDNESDAY, timeHour = 17, timeMinute = 30, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year),
+            WeeklyPlanTask(title = "Mid-Week Basketball & Athletic Conditioning", dayOfWeek = Calendar.WEDNESDAY, timeHour = 17, timeMinute = 30, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year, taskMode = "NORMAL"),
 
             // THURSDAY
-            WeeklyPlanTask(title = "Morning Devotional: Wisdom Seeking in Christ", dayOfWeek = Calendar.THURSDAY, timeHour = 7, timeMinute = 0, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year),
-            WeeklyPlanTask(title = "Deep Work: Project Milestones & Craft", dayOfWeek = Calendar.THURSDAY, timeHour = 9, timeMinute = 30, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year),
+            WeeklyPlanTask(title = "Deep Work: Project Milestones & Craft", dayOfWeek = Calendar.THURSDAY, timeHour = 9, timeMinute = 30, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year, taskMode = "STUDY_FOCUS"),
 
             // FRIDAY
-            WeeklyPlanTask(title = "Morning Devotional & Thanksgiving to God", dayOfWeek = Calendar.FRIDAY, timeHour = 7, timeMinute = 0, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year),
-            WeeklyPlanTask(title = "Weekly Accomplishments Review & Solitude", dayOfWeek = Calendar.FRIDAY, timeHour = 18, timeMinute = 0, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year),
+            WeeklyPlanTask(title = "Weekly Accomplishments Review & Solitude", dayOfWeek = Calendar.FRIDAY, timeHour = 18, timeMinute = 0, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year, taskMode = "MEDITATION"),
 
             // SATURDAY
-            WeeklyPlanTask(title = "Sabbath Rest, Scripture Reading & Renewal", dayOfWeek = Calendar.SATURDAY, timeHour = 8, timeMinute = 30, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year)
+            WeeklyPlanTask(title = "Sabbath Rest, Scripture Reading & Renewal", dayOfWeek = Calendar.SATURDAY, timeHour = 10, timeMinute = 0, isAlarmEnabled = true, weekOfYear = weekOfYear, year = year, taskMode = "MEDITATION")
         )
 
         defaults.forEach { addWeeklyTask(it) }

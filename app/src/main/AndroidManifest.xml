@@ -56,6 +56,11 @@
             android:exported="true"
             android:theme="@style/Theme.NYIRABYOLife" />
 
+        <activity
+            android:name=".ui.godfirst.HolyMeditationActivity"
+            android:exported="true"
+            android:theme="@style/Theme.NYIRABYOLife" />
+
         <!-- Recovery Module (Private Sanctum) -->
         <activity
             android:name=".ui.recovery.RecoveryActivity"
@@ -70,12 +75,6 @@
         <!-- Focus Timer Module -->
         <activity
             android:name=".ui.focus.FocusActivity"
-            android:exported="true"
-            android:theme="@style/Theme.NYIRABYOLife" />
-
-        <!-- WhatsApp Windows Module -->
-        <activity
-            android:name=".ui.whatsapp.WhatsAppWindowActivity"
             android:exported="true"
             android:theme="@style/Theme.NYIRABYOLife" />
 

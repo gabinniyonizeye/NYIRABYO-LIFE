@@ -33,6 +33,14 @@ class PreferencesManager(context: Context) {
         private const val KEY_APP_LIMIT_PREFIX = "limit_min_"
         private const val KEY_USAGE_TRACK_DATE = "usage_track_date"
         private const val KEY_ESCAPE_ROOM_UNTIL = "key_escape_room_until"
+        private const val KEY_ACTIVE_THEME = "key_active_theme"
+        private const val KEY_LAST_REMINDER_TIME = "key_last_reminder_time"
+        private const val KEY_LAST_WINDDOWN_DATE = "key_last_winddown_date"
+
+        const val THEME_HOLY_GOLD = "GOLD_OBSIDIAN"
+        const val THEME_CELESTIAL_BLUE = "CELESTIAL_BLUE"
+        const val THEME_LIVING_VINE = "LIVING_VINE"
+        const val THEME_ROYAL_AMETHYST = "ROYAL_AMETHYST"
 
         val INSTAGRAM_PACKAGES = setOf(
             "com.instagram.android",
@@ -103,30 +111,6 @@ class PreferencesManager(context: Context) {
         val diffMillis = System.currentTimeMillis() - start
         if (diffMillis < 0) return 0
         return (diffMillis / (1000 * 60 * 60 * 24)).toInt()
-    }
-
-    // --- WHATSAPP WINDOWS (08:00 - 20:00) ---
-    fun isWhatsAppWindowOpen(): Boolean {
-        val cal = Calendar.getInstance()
-        val nowMinutes = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
-
-        val startH = prefs.getInt(KEY_WHATSAPP_START_HOUR, 8)
-        val startM = prefs.getInt(KEY_WHATSAPP_START_MIN, 0)
-        val endH = prefs.getInt(KEY_WHATSAPP_END_HOUR, 20)
-        val endM = prefs.getInt(KEY_WHATSAPP_END_MIN, 0)
-
-        val startMinutes = startH * 60 + startM
-        val endMinutes = endH * 60 + endM
-
-        return nowMinutes in startMinutes..endMinutes
-    }
-
-    fun getWhatsAppWindowDescription(): String {
-        val startH = prefs.getInt(KEY_WHATSAPP_START_HOUR, 8)
-        val startM = prefs.getInt(KEY_WHATSAPP_START_MIN, 0)
-        val endH = prefs.getInt(KEY_WHATSAPP_END_HOUR, 20)
-        val endM = prefs.getInt(KEY_WHATSAPP_END_MIN, 0)
-        return "%02d:%02d – %02d:%02d".format(startH, startM, endH, endM)
     }
 
     // --- INSTAGRAM & TIKTOK SOCIAL RESTRICTION HELPERS ---
@@ -314,48 +298,87 @@ class PreferencesManager(context: Context) {
         return pkg == packageName && until > System.currentTimeMillis()
     }
 
+    // --- BEDTIME & SOCIAL MEDIA WINDOWS ---
+    fun isBedtimeLockdownActive(): Boolean {
+        val cal = Calendar.getInstance()
+        val hour = cal.get(Calendar.HOUR_OF_DAY)
+        // 22:00 (10 PM) until 05:00 (5 AM)
+        return hour >= 22 || hour < 5
+    }
+
+    fun isSocialMediaWindowOpen(): Boolean {
+        val cal = Calendar.getInstance()
+        val hour = cal.get(Calendar.HOUR_OF_DAY)
+        // Window open from 07:00 up to 20:00 (i.e. hour in 7..19)
+        return hour in 7..19
+    }
+
     // --- CORE LOGIC: IS A PACKAGE CURRENTLY BLOCKED? ---
     fun isPackageBlocked(pkg: String, myPackageName: String): Boolean {
         // Never block launcher itself
         if (pkg == myPackageName) return false
 
-        // Essential emergency & system dialer: never block
+        // Essential emergency & system apps: NEVER block under any restriction
         val essentialAllowed = listOf(
+            // Phone / calls
             "com.google.android.dialer",
             "com.android.dialer",
             "com.android.phone",
+            "com.android.incallui",
+            "com.google.android.incallui",
+            // Contacts
             "com.google.android.contacts",
             "com.android.contacts",
+            // Clock / alarm
             "com.google.android.deskclock",
-            "com.android.deskclock"
+            "com.android.deskclock",
+            // System Settings — always accessible (guarded by PIN, not hard-blocked)
+            "com.android.settings",
+            // Messages / SMS — emergency communication
+            "com.google.android.apps.messaging",
+            "com.android.mms",
+            // Google Play Store — app updates
+            "com.android.vending",
+            // Scripture & Bible: always allowed, never blocked
+            "com.bibiliya.ntagatifu"
         )
         if (essentialAllowed.contains(pkg)) return false
 
-        // If temporarily unlocked intentionally, allow it
+        // Also never block any core Android system package
+        if (pkg == "android" || pkg.startsWith("com.android.internal") ||
+            pkg == "com.android.systemui" || pkg == "com.google.android.gms") return false
+
+        // 1. BedTime Total Lockdown (22:00 - 05:00): blocks social/distraction apps only.
+        //    System apps, Settings, Phone, Messages are exempt (handled above).
+        if (isBedtimeLockdownActive()) {
+            return true
+        }
+
+        // If temporarily unlocked intentionally, allow it (outside bedtime)
         if (isPackageTemporarilyUnlocked(pkg)) return false
 
-        // 1. Check if Daily Usage Limit Exceeded
+        // 2. Social Media Window — WhatsApp is now treated same as social media.
+        //    Blocked before 07:00 and after 20:00 alongside all other social apps.
+        if (isSocialMediaOrDistraction(pkg)) {
+            if (!isSocialMediaWindowOpen()) {
+                return true
+            }
+        }
+
+        // 4. Daily Usage Limit Exceeded (e.g. 30-min budget for Instagram/TikTok)
         if (isAppUsageLimitExceeded(pkg)) {
             return true
         }
 
-        // 2. Check if Focus Session is active
+        // 5. Active Focus Session — blocks all social/distraction apps (WhatsApp now included)
         if (isFocusSessionActive()) {
             val restricted = getRestrictedApps()
-            if (restricted.contains(pkg) || isInstagramOrTikTok(pkg) || pkg == "com.whatsapp" || pkg == "com.whatsapp.w4b") {
+            if (restricted.contains(pkg) || isSocialMediaOrDistraction(pkg)) {
                 return true
             }
         }
 
-        // 3. Check WhatsApp Windows (08:00 - 20:00)
-        if (pkg == "com.whatsapp" || pkg == "com.whatsapp.w4b") {
-            if (!isWhatsAppWindowOpen()) {
-                return true
-            }
-        }
-
-        // 4. Check Restricted Apps list
-        // Instagram and TikTok have a 30-minute daily budget rather than total 24/7 blocking
+        // 6. Block Restricted Apps
         if (isBlockerEnabled()) {
             val restricted = getRestrictedApps()
             if (restricted.contains(pkg) && !isInstagramOrTikTok(pkg)) {
@@ -368,9 +391,10 @@ class PreferencesManager(context: Context) {
 
     fun getBlockReason(pkg: String): String {
         return when {
+            isBedtimeLockdownActive() -> "BEDTIME_LOCKDOWN"
+            isSocialMediaOrDistraction(pkg) && !isSocialMediaWindowOpen() -> "SOCIAL_MEDIA_WINDOW_CLOSED"
             isAppUsageLimitExceeded(pkg) -> "USAGE_LIMIT_EXCEEDED"
             isFocusSessionActive() -> "FOCUS_SESSION_ACTIVE"
-            pkg.contains("whatsapp") -> "WHATSAPP_WINDOW_CLOSED"
             pkg == "com.android.settings" -> "SETTINGS_GUARD"
             else -> "DISTRACTION_RESTRICTED"
         }
@@ -406,9 +430,12 @@ class PreferencesManager(context: Context) {
         prefs.edit().remove(KEY_ESCAPE_ROOM_UNTIL).apply()
     }
 
-    // Identifies social media and high-distraction apps that must be killed when minimized
+    // Identifies social media and high-distraction apps
     fun isSocialMediaOrDistraction(pkg: String): Boolean {
         val knownSocials = setOf(
+            // Messaging / social (treated same as social media — no special window)
+            "com.whatsapp",
+            "com.whatsapp.w4b",
             "com.instagram.android",
             "com.facebook.katana",
             "com.facebook.orca",
@@ -426,6 +453,32 @@ class PreferencesManager(context: Context) {
         if (knownSocials.contains(pkg)) return true
         if (getRestrictedApps().contains(pkg)) return true
         return false
+    }
+
+    // --- THEMES ---
+    fun getActiveTheme(): String {
+        return prefs.getString(KEY_ACTIVE_THEME, THEME_HOLY_GOLD) ?: THEME_HOLY_GOLD
+    }
+
+    fun setActiveTheme(theme: String) {
+        prefs.edit().putString(KEY_ACTIVE_THEME, theme).apply()
+    }
+
+    // --- MINDFUL HABITATION REMINDERS ---
+    fun getLastReminderTime(): Long {
+        return prefs.getLong(KEY_LAST_REMINDER_TIME, 0L)
+    }
+
+    fun setLastReminderTime(time: Long) {
+        prefs.edit().putLong(KEY_LAST_REMINDER_TIME, time).apply()
+    }
+
+    fun getLastWindDownDate(): String {
+        return prefs.getString(KEY_LAST_WINDDOWN_DATE, "") ?: ""
+    }
+
+    fun setLastWindDownDate(date: String) {
+        prefs.edit().putString(KEY_LAST_WINDDOWN_DATE, date).apply()
     }
 
     fun clearAllPreferences() {

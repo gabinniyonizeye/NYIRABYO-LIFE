@@ -40,6 +40,7 @@ class AppRestrictionsActivity : AppCompatActivity() {
         prefs = PreferencesManager.getInstance(this)
         binding.btnBack.setOnClickListener { finish() }
 
+        applyThemeColors()
         setupSwitches()
         setupRecyclerView()
         loadInstalledAppsAsync()
@@ -161,6 +162,21 @@ class AppRestrictionsActivity : AppCompatActivity() {
         binding.tvRestrictedCount.text = "$restrictedCount apps shielded • Settings Guard: ${if (prefs.isSettingsProtectionEnabled()) "ON" else "OFF"}"
     }
 
+    private fun applyThemeColors() {
+        val theme = com.example.nyirabyolife.util.ThemeHelper.getActiveThemeColors(this)
+        binding.btnBack.background = com.example.nyirabyolife.util.ThemeHelper.createPillDrawable(this, theme)
+        binding.cardMasterControls.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, theme, isElevated = true)
+        binding.layoutSearchBar.background = com.example.nyirabyolife.util.ThemeHelper.createPillDrawable(this, theme)
+        binding.tvRestrictedCount.setTextColor(theme.secondaryAccent)
+
+        val thumbColors = android.content.res.ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+            intArrayOf(theme.primaryAccent, ContextCompat.getColor(this, R.color.text_tertiary))
+        )
+        binding.switchMasterBlocker.thumbTintList = thumbColors
+        binding.switchSettingsGuard.thumbTintList = thumbColors
+    }
+
     inner class RestrictionAdapter(
         private var list: List<AppItem>,
         private val onToggle: (AppItem, Boolean) -> Unit,
@@ -197,6 +213,8 @@ class AppRestrictionsActivity : AppCompatActivity() {
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val theme = com.example.nyirabyolife.util.ThemeHelper.getActiveThemeColors(holder.itemView.context)
+            holder.binding.root.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(holder.itemView.context, theme, isElevated = false)
             val app = filtered[position]
             val restrictedSet = prefs.getRestrictedApps()
             val isRestricted = restrictedSet.contains(app.packageName)
@@ -221,10 +239,10 @@ class AppRestrictionsActivity : AppCompatActivity() {
                 if (todayMinutes >= limitMinutes) {
                     holder.binding.tvUsageToday.setTextColor(ContextCompat.getColor(this@AppRestrictionsActivity, R.color.rose_alert))
                 } else {
-                    holder.binding.tvUsageToday.setTextColor(ContextCompat.getColor(this@AppRestrictionsActivity, R.color.emerald_accent))
+                    holder.binding.tvUsageToday.setTextColor(theme.secondaryAccent)
                 }
                 holder.binding.btnUsageTimer.text = "${limitMinutes}m limit ⏱"
-                holder.binding.btnUsageTimer.setTextColor(ContextCompat.getColor(this@AppRestrictionsActivity, R.color.gold_primary))
+                holder.binding.btnUsageTimer.setTextColor(theme.primaryAccent)
             } else {
                 holder.binding.tvUsageToday.text = "Used today: ${todayMinutes}m • No daily limit"
                 holder.binding.tvUsageToday.setTextColor(ContextCompat.getColor(this@AppRestrictionsActivity, R.color.text_secondary))
@@ -238,6 +256,11 @@ class AppRestrictionsActivity : AppCompatActivity() {
 
             holder.binding.switchRestrict.setOnCheckedChangeListener(null)
             holder.binding.switchRestrict.isChecked = isRestricted
+            val itemThumbColors = android.content.res.ColorStateList(
+                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                intArrayOf(theme.primaryAccent, ContextCompat.getColor(this@AppRestrictionsActivity, R.color.text_tertiary))
+            )
+            holder.binding.switchRestrict.thumbTintList = itemThumbColors
             holder.binding.switchRestrict.setOnCheckedChangeListener { _, isChecked ->
                 onToggle(app, isChecked)
             }

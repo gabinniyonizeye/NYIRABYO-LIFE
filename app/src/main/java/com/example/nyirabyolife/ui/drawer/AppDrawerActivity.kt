@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.nyirabyolife.data.local.PreferencesManager
 import com.example.nyirabyolife.data.model.AppItem
 import com.example.nyirabyolife.databinding.ActivityAppDrawerBinding
+import com.example.nyirabyolife.util.ThemeHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -36,8 +37,16 @@ class AppDrawerActivity : AppCompatActivity() {
 
         binding.btnBack.setOnClickListener { finish() }
 
+        applyThemeColors()
         setupRecyclerView()
         loadInstalledAppsAsync()
+    }
+
+    private fun applyThemeColors() {
+        val theme = ThemeHelper.getActiveThemeColors(this)
+        binding.btnBack.background = ThemeHelper.createPillDrawable(this, theme)
+        binding.layoutAppSearchBox.background = ThemeHelper.createPillDrawable(this, theme)
+        binding.tvAppCount.setTextColor(theme.secondaryAccent)
 
         binding.etSearchApp.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -114,8 +123,18 @@ class AppDrawerActivity : AppCompatActivity() {
     }
 
     private fun launchApp(app: AppItem) {
+        val targetPkg = app.packageName
+        if (prefs.isPackageBlocked(targetPkg, packageName)) {
+            val intent = Intent(this, com.example.nyirabyolife.ui.shield.BlockShieldActivity::class.java).apply {
+                putExtra(com.example.nyirabyolife.ui.shield.BlockShieldActivity.EXTRA_PACKAGE_NAME, targetPkg)
+                putExtra(com.example.nyirabyolife.ui.shield.BlockShieldActivity.EXTRA_BLOCK_REASON, prefs.getBlockReason(targetPkg))
+            }
+            startActivity(intent)
+            return
+        }
+
         try {
-            val launchIntent = packageManager.getLaunchIntentForPackage(app.packageName)
+            val launchIntent = packageManager.getLaunchIntentForPackage(targetPkg)
             if (launchIntent != null) {
                 startActivity(launchIntent)
                 finish()

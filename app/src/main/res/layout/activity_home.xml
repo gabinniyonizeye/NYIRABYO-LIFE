@@ -7,60 +7,108 @@
     android:layout_height="match_parent"
     android:background="@color/bg_dark">
 
+    <!-- Living Ambient Spiritual Glow Wallpaper Behind Slides -->
+    <com.example.nyirabyolife.ui.home.AmbientGlowView
+        android:id="@+id/ambientGlowView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
     <!-- Top Status / Header Bar -->
     <LinearLayout
         android:id="@+id/headerLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingHorizontal="24dp"
-        android:paddingTop="24dp"
-        android:paddingBottom="8dp"
+        android:orientation="vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="6dp"
         app:layout_constraintTop_toTopOf="parent">
 
+        <!-- Top Title Row: Full width for NYIRABYO LIFE -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
             <TextView
-                android:layout_width="wrap_content"
+                android:id="@+id/tvHeaderTitle"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:text="NYIRABYO LIFE"
                 android:textColor="@color/gold_primary"
-                android:textSize="18sp"
+                android:textSize="20sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.15" />
+                android:singleLine="true"
+                android:letterSpacing="0.12" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Live with purpose."
-                android:textColor="@color/text_secondary"
-                android:textSize="13sp"
-                android:letterSpacing="0.05" />
+            <ImageButton
+                android:id="@+id/btnLockMode"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="@drawable/pill_background"
+                android:src="@drawable/ic_lock"
+                android:contentDescription="Discipline Lock"
+                android:layout_marginEnd="6dp"
+                app:tint="@color/gold_primary" />
+
+            <ImageButton
+                android:id="@+id/btnSettings"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="@drawable/pill_background"
+                android:src="@drawable/ic_settings"
+                android:contentDescription="Settings"
+                app:tint="@color/text_secondary" />
         </LinearLayout>
 
-        <ImageButton
-            android:id="@+id/btnLockMode"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="@drawable/pill_background"
-            android:src="@drawable/ic_lock"
-            android:contentDescription="Discipline Lock"
-            android:layout_marginEnd="8dp"
-            app:tint="@color/gold_primary" />
+        <!-- Sub Row: Subtitle + Quick Theme and Meditation Pills -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="4dp">
 
-        <ImageButton
-            android:id="@+id/btnSettings"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="@drawable/pill_background"
-            android:src="@drawable/ic_settings"
-            android:contentDescription="Settings"
-            app:tint="@color/text_secondary" />
+            <TextView
+                android:id="@+id/tvHeaderSubtitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Holy Habitation • Live with Purpose"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:singleLine="true"
+                android:letterSpacing="0.04" />
+
+            <TextView
+                android:id="@+id/btnTheme"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:gravity="center"
+                android:paddingHorizontal="10dp"
+                android:text="🎨 Theme"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:background="@drawable/pill_background"
+                android:foreground="?attr/selectableItemBackground"
+                android:layout_marginEnd="6dp" />
+
+            <TextView
+                android:id="@+id/btnMeditate"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:gravity="center"
+                android:paddingHorizontal="12dp"
+                android:text="🕊️ Meditate"
+                android:textColor="@color/gold_primary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:background="@drawable/pill_background"
+                android:foreground="?attr/selectableItemBackground" />
+        </LinearLayout>
     </LinearLayout>
 
     <!-- Horizontal Slides (ViewPager2) -->
@@ -107,42 +155,42 @@
             android:layout_marginHorizontal="4dp" />
     </LinearLayout>
 
-    <!-- Bottom Dock: Favorite Apps & App Drawer Launcher -->
+    <!-- Bottom Dock: Phone & App Drawer Launcher -->
     <LinearLayout
         android:id="@+id/bottomDock"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingHorizontal="16dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="12dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="8dp"
         android:background="@drawable/pill_background"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginBottom="12dp"
+        android:layout_marginBottom="10dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
-        <!-- Favorite Apps Row -->
+        <!-- Phone icon row -->
         <LinearLayout
             android:id="@+id/layoutFavorites"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center"
-            android:layout_marginBottom="10dp" />
+            android:layout_marginBottom="6dp" />
 
-        <!-- Search / All Apps Pill Button -->
+        <!-- All Applications button -->
         <LinearLayout
             android:id="@+id/btnOpenAppDrawer"
             android:layout_width="match_parent"
-            android:layout_height="44dp"
+            android:layout_height="38dp"
             android:background="@drawable/card_background"
             android:orientation="horizontal"
             android:gravity="center"
             android:foreground="?attr/selectableItemBackground">
 
             <ImageView
-                android:layout_width="18dp"
-                android:layout_height="18dp"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
                 android:src="@drawable/ic_apps"
                 app:tint="@color/gold_primary"
                 android:contentDescription="Apps" />
@@ -150,10 +198,10 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="10dp"
+                android:layout_marginStart="8dp"
                 android:text="All Applications"
                 android:textColor="@color/text_secondary"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:letterSpacing="0.05" />
         </LinearLayout>
     </LinearLayout>

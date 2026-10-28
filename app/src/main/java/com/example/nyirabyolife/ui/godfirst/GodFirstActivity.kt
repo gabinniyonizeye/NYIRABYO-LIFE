@@ -12,6 +12,7 @@ import com.example.nyirabyolife.data.local.ScriptureRepository
 import com.example.nyirabyolife.data.model.ChristRevelation
 import com.example.nyirabyolife.databinding.ActivityGodFirstBinding
 import com.example.nyirabyolife.databinding.ItemPrayerBinding
+import com.example.nyirabyolife.util.ThemeHelper
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -31,10 +32,31 @@ class GodFirstActivity : AppCompatActivity() {
         dbHelper = NyirabyoDbHelper.getInstance(this)
         binding.btnBack.setOnClickListener { finish() }
 
+        applyThemeColors()
         setupSacredPresenceAnime()
         setupChristRevelations()
         setupPrayers()
         setupGratitude()
+    }
+
+    private fun applyThemeColors() {
+        val theme = ThemeHelper.getActiveThemeColors(this)
+        binding.cardSacredPresence.background = ThemeHelper.createCardDrawable(this, theme, isElevated = true)
+        binding.cardKnowingGodAndSon.background = ThemeHelper.createCardDrawable(this, theme, isElevated = true)
+        binding.btnBack.background = ThemeHelper.createPillDrawable(this, theme)
+        binding.btnCycleRevelation.background = ThemeHelper.createPillDrawable(this, theme)
+        binding.btnCycleRevelation.setTextColor(theme.secondaryAccent)
+
+        val addPill = ThemeHelper.createPillDrawable(this, theme)
+        addPill.setColor(theme.primaryAccent)
+        binding.btnAddPrayer.background = addPill
+
+        binding.ivSparkleHeader.setColorFilter(theme.primaryAccent)
+        binding.lblPresenceBadge.setTextColor(theme.primaryAccent)
+        binding.ivCrossIcon.setColorFilter(theme.primaryAccent)
+        binding.tvThemeBadge.setTextColor(theme.primaryAccent)
+        binding.tvFullRef.setTextColor(theme.primaryAccent)
+        binding.tvBreathPhase.setTextColor(theme.primaryAccent)
     }
 
     private fun setupSacredPresenceAnime() {
@@ -87,13 +109,14 @@ class GodFirstActivity : AppCompatActivity() {
         val prayers = dbHelper.getPrayers()
         val inflater = LayoutInflater.from(this)
 
+        val theme = ThemeHelper.getActiveThemeColors(this)
         prayers.forEach { prayer ->
             val prayerBinding = ItemPrayerBinding.inflate(inflater, binding.layoutPrayerList, false)
             prayerBinding.tvPrayerTitle.text = prayer.title
 
             if (prayer.isAnswered) {
                 prayerBinding.ivPrayerCheck.setImageResource(R.drawable.ic_check_circle)
-                prayerBinding.ivPrayerCheck.setColorFilter(ContextCompat.getColor(this, R.color.emerald_accent))
+                prayerBinding.ivPrayerCheck.setColorFilter(theme.secondaryAccent)
                 prayerBinding.tvPrayerTitle.paintFlags = prayerBinding.tvPrayerTitle.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
                 prayerBinding.tvPrayerTitle.setTextColor(ContextCompat.getColor(this, R.color.text_tertiary))
             } else {

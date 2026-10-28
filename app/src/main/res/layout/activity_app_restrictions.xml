@@ -52,6 +52,7 @@
 
     <!-- Master Controls Card -->
     <LinearLayout
+        android:id="@+id/cardMasterControls"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@drawable/card_background"
@@ -158,6 +159,7 @@
 
     <!-- Search Bar -->
     <LinearLayout
+        android:id="@+id/layoutSearchBar"
         android:layout_width="match_parent"
         android:layout_height="44dp"
         android:background="@drawable/card_background_elevated"

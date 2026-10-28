@@ -15,6 +15,7 @@ import com.example.nyirabyolife.data.local.NyirabyoDbHelper
 import com.example.nyirabyolife.data.local.PreferencesManager
 import com.example.nyirabyolife.data.model.FocusSession
 import com.example.nyirabyolife.databinding.ActivityFocusBinding
+import com.example.nyirabyolife.util.ThemeHelper
 
 class FocusActivity : AppCompatActivity() {
 
@@ -32,6 +33,7 @@ class FocusActivity : AppCompatActivity() {
 
         binding.btnBack.setOnClickListener { finish() }
 
+        applyThemeColors()
         setupModeSelectors()
         setupPresets()
         updateTimerDisplay(millisRemaining)
@@ -46,6 +48,25 @@ class FocusActivity : AppCompatActivity() {
 
         binding.btnResetTimer.setOnClickListener {
             resetTimer()
+        }
+    }
+
+    private fun applyThemeColors() {
+        val theme = ThemeHelper.getActiveThemeColors(this)
+        binding.btnBack.background = ThemeHelper.createPillDrawable(this, theme)
+        binding.cardFocusCenter.background = ThemeHelper.createCardDrawable(this, theme, isElevated = true)
+        
+        val togglePill = ThemeHelper.createPillDrawable(this, theme)
+        togglePill.setColor(theme.primaryAccent)
+        binding.btnToggleTimer.background = togglePill
+        binding.btnToggleTimer.setTextColor(ContextCompat.getColor(this, R.color.bg_dark))
+        
+        binding.btnResetTimer.background = ThemeHelper.createPillDrawable(this, theme)
+        binding.btnResetTimer.setColorFilter(theme.secondaryAccent)
+
+        val modeButtons = listOf(binding.btnModeCoding, binding.btnModeTraining, binding.btnModePrayer, binding.btnModeSleep)
+        modeButtons.forEach { btn ->
+            btn.background = ThemeHelper.createPillDrawable(this, theme)
         }
     }
 
@@ -84,13 +105,16 @@ class FocusActivity : AppCompatActivity() {
         updateTimerDisplay(millisRemaining)
 
         // Highlight selected preset
+        val theme = ThemeHelper.getActiveThemeColors(this)
         val presets = mapOf(15 to binding.preset15, 25 to binding.preset25, 45 to binding.preset45, 60 to binding.preset60)
         presets.forEach { (m, tv) ->
             if (m == mins) {
-                tv.setBackgroundResource(R.drawable.button_gold)
+                val activePill = ThemeHelper.createPillDrawable(this, theme)
+                activePill.setColor(theme.primaryAccent)
+                tv.background = activePill
                 tv.setTextColor(ContextCompat.getColor(this, R.color.bg_dark))
             } else {
-                tv.setBackgroundResource(R.drawable.card_background_elevated)
+                tv.background = ThemeHelper.createPillDrawable(this, theme)
                 tv.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
             }
         }
@@ -105,10 +129,14 @@ class FocusActivity : AppCompatActivity() {
             }
 
             override fun onFinish() {
+                val theme = ThemeHelper.getActiveThemeColors(this@FocusActivity)
                 isTimerRunning = false
                 PreferencesManager.getInstance(this@FocusActivity).clearActiveFocusSession()
                 binding.btnToggleTimer.text = "Session Complete!"
-                binding.btnToggleTimer.setBackgroundResource(R.drawable.button_emerald)
+                val finishPill = ThemeHelper.createPillDrawable(this@FocusActivity, theme)
+                finishPill.setColor(theme.secondaryAccent)
+                binding.btnToggleTimer.background = finishPill
+                binding.btnToggleTimer.setTextColor(ContextCompat.getColor(this@FocusActivity, R.color.bg_dark))
                 millisRemaining = selectedMinutes * 60 * 1000L
                 updateTimerDisplay(millisRemaining)
 
@@ -125,9 +153,13 @@ class FocusActivity : AppCompatActivity() {
             }
         }.start()
 
+        val theme = ThemeHelper.getActiveThemeColors(this)
         isTimerRunning = true
         binding.btnToggleTimer.text = "Pause Session"
-        binding.btnToggleTimer.setBackgroundResource(R.drawable.button_gold)
+        val pausePill = ThemeHelper.createPillDrawable(this, theme)
+        pausePill.setColor(theme.primaryAccent)
+        binding.btnToggleTimer.background = pausePill
+        binding.btnToggleTimer.setTextColor(ContextCompat.getColor(this, R.color.bg_dark))
     }
 
     private fun pauseTimer() {
@@ -144,7 +176,11 @@ class FocusActivity : AppCompatActivity() {
         millisRemaining = selectedMinutes * 60 * 1000L
         updateTimerDisplay(millisRemaining)
         binding.btnToggleTimer.text = "Start Session"
-        binding.btnToggleTimer.setBackgroundResource(R.drawable.button_gold)
+        val theme = ThemeHelper.getActiveThemeColors(this)
+        val startPill = ThemeHelper.createPillDrawable(this, theme)
+        startPill.setColor(theme.primaryAccent)
+        binding.btnToggleTimer.background = startPill
+        binding.btnToggleTimer.setTextColor(ContextCompat.getColor(this, R.color.bg_dark))
     }
 
     private fun updateTimerDisplay(millis: Long) {

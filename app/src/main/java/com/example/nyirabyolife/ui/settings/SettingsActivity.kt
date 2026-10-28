@@ -63,6 +63,30 @@ class SettingsActivity : AppCompatActivity() {
         binding.btnWipeAll.setOnClickListener {
             confirmWipeAll()
         }
+
+        applyThemeColors()
+    }
+
+    private fun applyThemeColors() {
+        val theme = com.example.nyirabyolife.util.ThemeHelper.getActiveThemeColors(this)
+        binding.btnBack.background = com.example.nyirabyolife.util.ThemeHelper.createPillDrawable(this, theme)
+
+        binding.cardDefaultLauncher.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, theme, isElevated = true)
+        binding.cardPermissionsHub.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, theme, isElevated = true)
+        binding.cardAppRestrictions.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, theme, isElevated = true)
+        binding.cardLockMode.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, theme, isElevated = true)
+        binding.cardSecurity.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, theme, isElevated = true)
+
+        binding.lblLauncher.setTextColor(theme.primaryAccent)
+        binding.lblPermsHub.setTextColor(theme.primaryAccent)
+        binding.lblRestrictions.setTextColor(theme.primaryAccent)
+        binding.lblLockScreen.setTextColor(theme.primaryAccent)
+        binding.lblSecurity.setTextColor(theme.primaryAccent)
+        binding.lblPrivacy.setTextColor(theme.primaryAccent)
+
+        binding.btnExportJson.background = com.example.nyirabyolife.util.ThemeHelper.createPillDrawable(this, theme)
+        binding.btnClearRecoveryOnly.background = com.example.nyirabyolife.util.ThemeHelper.createPillDrawable(this, theme)
+        binding.btnWipeAll.background = com.example.nyirabyolife.util.ThemeHelper.createPillDrawable(this, theme)
     }
 
     private fun openDefaultLauncherSettings() {

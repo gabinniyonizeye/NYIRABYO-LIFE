@@ -30,7 +30,18 @@ class PermissionsHubActivity : AppCompatActivity() {
 
         binding.btnBack.setOnClickListener { finish() }
 
+        applyThemeColors()
         setupClicks()
+    }
+
+    private fun applyThemeColors() {
+        val theme = com.example.nyirabyolife.util.ThemeHelper.getActiveThemeColors(this)
+        binding.btnBack.background = com.example.nyirabyolife.util.ThemeHelper.createPillDrawable(this, theme)
+        binding.cardPermLauncher.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, theme, isElevated = true)
+        binding.cardPermAccessibility.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, theme, isElevated = true)
+        binding.cardPermUsage.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, theme, isElevated = true)
+        binding.cardPermOverlay.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, theme, isElevated = true)
+        binding.cardPermDnd.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, theme, isElevated = true)
     }
 
     override fun onResume() {

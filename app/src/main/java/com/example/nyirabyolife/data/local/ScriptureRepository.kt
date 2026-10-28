@@ -84,6 +84,30 @@ object ScriptureRepository {
     private val christRevelations = listOf(
         ChristRevelation(
             id = 1,
+            title = "Holy Habitation: Abiding in the Vine",
+            reference = "John 15:4-5",
+            scripture = "Remain in me, as I also remain in you. No branch can bear fruit by itself; it must remain in the vine. Neither can you bear fruit unless you remain in me. I am the vine; you are the branches. If you remain in me and I in you, you will bear much fruit; apart from me you can do nothing.",
+            revelation = "Habit transformation begins with spiritual Habitation. When you dwell continuously in Christ's holy presence, old impulses wither and supernatural discipline, peace, and divine power naturally flourish.",
+            prayer = "Lord Jesus, You are the true Vine. I choose to remain and make my home in You today. Abide in my thoughts, renew my habits, and let Your divine life flow through everything I do."
+        ),
+        ChristRevelation(
+            id = 2,
+            title = "The Most High Your Habitation",
+            reference = "Psalm 91:9-10",
+            scripture = "If you say, 'The LORD is my refuge,' and you make the Most High your dwelling place, no harm will overtake you, no disaster will come near your tent.",
+            revelation = "When God is not just a visitor but your permanent Habitation, you walk in impenetrable divine protection. Temptation loses its grip when your home is in the secret place of the Most High.",
+            prayer = "Heavenly Father, I establish my habitation in Your holy presence. Protect my eyes, guard my heart, and let no destructive habit breach the sanctuary of my soul."
+        ),
+        ChristRevelation(
+            id = 3,
+            title = "Mind Transformation & Renewed Habits",
+            reference = "Romans 12:2",
+            scripture = "Do not conform to the pattern of this world, but be transformed by the renewing of your mind. Then you will be able to test and approve what God’s will is—his good, pleasing and perfect will.",
+            revelation = "Discipline is the fruit of a renewed mind. As you meditate deeply on God's Holy Word and Christ's righteousness, digital addictions and worldly patterns are shattered by the glory of Christ.",
+            prayer = "Lord Jesus, renew my mind through Your truth. Cleanse my subconscious thoughts, align my daily habits with eternity, and grant me steadfast focus."
+        ),
+        ChristRevelation(
+            id = 4,
             title = "The Only True God & Jesus Christ",
             reference = "John 17:3",
             scripture = "And this is eternal life, that they know you, the only true God, and Jesus Christ whom you have sent.",

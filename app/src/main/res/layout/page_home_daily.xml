@@ -9,20 +9,20 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:orientation="vertical"
         android:paddingHorizontal="20dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="24dp">
+        android:paddingTop="6dp"
+        android:paddingBottom="12dp">
 
-        <!-- Digital Clock & Date Section -->
+        <!-- Digital Clock & Sacred Date Section -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center"
-            android:layout_marginTop="2dp"
-            android:layout_marginBottom="12dp">
+            android:layout_marginTop="0dp"
+            android:layout_marginBottom="8dp">
 
             <TextClock
                 android:id="@+id/textClockTime"
@@ -31,7 +31,7 @@
                 android:format12Hour="hh:mm"
                 android:format24Hour="HH:mm"
                 android:textColor="@color/text_primary"
-                android:textSize="44sp"
+                android:textSize="32sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.02" />
 
@@ -42,25 +42,36 @@
                 android:format12Hour="EEEE, MMMM d"
                 android:format24Hour="EEEE, MMMM d"
                 android:textColor="@color/text_secondary"
-                android:textSize="12sp"
+                android:textSize="10sp"
                 android:letterSpacing="0.08"
                 android:textAllCaps="true" />
+
+            <TextView
+                android:id="@+id/tvSacredHabitationBanner"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="HOLY HABITATION • ABIDING IN CHRIST"
+                android:textColor="@color/gold_primary"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.14" />
         </LinearLayout>
 
-        <!-- KNOWING GOD & HIS SON Card -->
+        <!-- KNOWING GOD & HIS SON / BIBLE STUDY & HABIT HABITATION Card -->
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/cardTodayWord"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/card_background"
-            android:padding="16dp"
-            android:layout_marginBottom="12dp"
+            android:background="@drawable/card_background_elevated"
+            android:padding="12dp"
+            android:layout_marginBottom="8dp"
             android:foreground="?attr/selectableItemBackground">
 
             <ImageView
                 android:id="@+id/ivSparkleGod"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
                 android:src="@drawable/ic_sparkle"
                 app:tint="@color/gold_primary"
                 android:contentDescription="Celestial Light"
@@ -72,11 +83,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
-                android:text="KNOWING GOD &amp; HIS SON"
+                android:text="HOLY HABITATION • BIBLE STUDY FOCUS"
                 android:textColor="@color/gold_primary"
-                android:textSize="11sp"
+                android:textSize="10sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.16"
+                android:letterSpacing="0.12"
                 app:layout_constraintTop_toTopOf="@id/ivSparkleGod"
                 app:layout_constraintBottom_toBottomOf="@id/ivSparkleGod"
                 app:layout_constraintStart_toEndOf="@id/ivSparkleGod" />
@@ -85,10 +96,10 @@
                 android:id="@+id/tvRevelationTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="The Only True God &amp; Jesus Christ"
+                android:layout_marginTop="6dp"
+                android:text="Holy Habitation: Abiding in the Vine"
                 android:textColor="@color/text_primary"
-                android:textSize="15sp"
+                android:textSize="14sp"
                 android:textStyle="bold"
                 app:layout_constraintTop_toBottomOf="@id/lblWordBadge"
                 app:layout_constraintStart_toStartOf="parent"
@@ -98,11 +109,13 @@
                 android:id="@+id/tvVerseText"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="“And this is eternal life, that they know you, the only true God, and Jesus Christ whom you have sent.”"
+                android:layout_marginTop="4dp"
+                android:text="“Remain in me, as I also remain in you. Apart from me you can do nothing.”"
                 android:textColor="@color/text_secondary"
-                android:textSize="13sp"
-                android:lineSpacingExtra="3dp"
+                android:textSize="12sp"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:lineSpacingExtra="2dp"
                 app:layout_constraintTop_toBottomOf="@id/tvRevelationTitle"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />
@@ -111,10 +124,10 @@
                 android:id="@+id/tvVerseRef"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="John 17:3"
+                android:layout_marginTop="6dp"
+                android:text="John 15:4-5"
                 android:textColor="@color/gold_primary"
-                android:textSize="12sp"
+                android:textSize="11sp"
                 android:textStyle="bold"
                 app:layout_constraintTop_toBottomOf="@id/tvVerseText"
                 app:layout_constraintStart_toStartOf="parent" />
@@ -123,32 +136,44 @@
                 android:id="@+id/tvReflectPrompt"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Holy Presence →"
-                android:textColor="@color/gold_primary"
-                android:textSize="12sp"
+                android:text="Bible Study &amp; Presence →"
+                android:textColor="@color/emerald_accent"
+                android:textSize="11sp"
                 android:textStyle="bold"
                 app:layout_constraintBottom_toBottomOf="@id/tvVerseRef"
                 app:layout_constraintEnd_toEndOf="parent" />
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <!-- TODAY'S MISSION Card -->
+        <!-- TODAY'S MISSION & HABIT DISCIPLINE Card (Fully Synced with Weekly Plan) -->
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/cardTodayMission"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@drawable/card_background"
-            android:padding="16dp"
-            android:layout_marginBottom="12dp">
+            android:padding="12dp">
 
             <TextView
                 android:id="@+id/lblMissionHeader"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Today's mission"
+                android:text="Today's Mission"
                 android:textColor="@color/text_primary"
-                android:textSize="16sp"
+                android:textSize="15sp"
                 android:textStyle="bold"
                 app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <TextView
+                android:id="@+id/tvMissionSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SYNCED WITH WEEKLY PLAN • HABIT REWIRING ⏰"
+                android:textColor="@color/gold_primary"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:layout_marginTop="2dp"
+                app:layout_constraintTop_toBottomOf="@id/lblMissionHeader"
                 app:layout_constraintStart_toStartOf="parent" />
 
             <TextView
@@ -157,7 +182,7 @@
                 android:layout_height="wrap_content"
                 android:text="0 of 3 complete"
                 android:textColor="@color/emerald_accent"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:textStyle="bold"
                 app:layout_constraintBaseline_toBaselineOf="@id/lblMissionHeader"
                 app:layout_constraintEnd_toEndOf="parent" />
@@ -168,212 +193,80 @@
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="0dp"
                 android:layout_height="4dp"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="8dp"
                 android:max="3"
                 android:progress="0"
                 android:progressTint="@color/emerald_accent"
                 android:progressBackgroundTint="@color/border_subtle"
-                app:layout_constraintTop_toBottomOf="@id/lblMissionHeader"
+                app:layout_constraintTop_toBottomOf="@id/tvMissionSubtitle"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />
 
-            <!-- Mission Row 1 -->
+            <!-- Dynamic missions container synchronized with weekly plan -->
             <LinearLayout
-                android:id="@+id/rowMission1"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingVertical="10dp"
-                android:layout_marginTop="10dp"
-                android:foreground="?attr/selectableItemBackground"
-                app:layout_constraintTop_toBottomOf="@id/progressBarMissions">
-
-                <ImageView
-                    android:id="@+id/ivCheck1"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:src="@drawable/ic_circle_outline"
-                    app:tint="@color/text_tertiary"
-                    android:contentDescription="Check" />
-
-                <TextView
-                    android:id="@+id/tvMissionTitle1"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="14dp"
-                    android:text="Pray and read Scripture"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
-            <!-- Mission Row 2 -->
-            <LinearLayout
-                android:id="@+id/rowMission2"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingVertical="10dp"
-                android:foreground="?attr/selectableItemBackground"
-                app:layout_constraintTop_toBottomOf="@id/rowMission1">
-
-                <ImageView
-                    android:id="@+id/ivCheck2"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:src="@drawable/ic_circle_outline"
-                    app:tint="@color/text_tertiary"
-                    android:contentDescription="Check" />
-
-                <TextView
-                    android:id="@+id/tvMissionTitle2"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="14dp"
-                    android:text="Build my future — coding"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
-            <!-- Mission Row 3 -->
-            <LinearLayout
-                android:id="@+id/rowMission3"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingVertical="10dp"
-                android:foreground="?attr/selectableItemBackground"
-                app:layout_constraintTop_toBottomOf="@id/rowMission2">
-
-                <ImageView
-                    android:id="@+id/ivCheck3"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:src="@drawable/ic_circle_outline"
-                    app:tint="@color/text_tertiary"
-                    android:contentDescription="Check" />
-
-                <TextView
-                    android:id="@+id/tvMissionTitle3"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="14dp"
-                    android:text="Train my body — basketball"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/btnEditMissions"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Edit Priorities"
-                android:textColor="@color/text_tertiary"
-                android:textSize="12sp"
-                android:padding="4dp"
-                app:layout_constraintTop_toBottomOf="@id/rowMission3"
-                app:layout_constraintEnd_toEndOf="parent" />
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-        <!-- WEEKLY PLANS & SUNDAY RITUAL Card -->
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/cardWeeklyPlanLauncher"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/card_background"
-            android:padding="16dp"
-            android:layout_marginBottom="12dp">
-
-            <!-- Sunday Highlight Pill (Visible on Sunday) -->
-            <LinearLayout
-                android:id="@+id/layoutSundayLauncherBadge"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:background="@drawable/card_background_elevated"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="8dp"
-                android:layout_marginBottom="10dp"
-                android:visibility="gone"
-                app:layout_constraintTop_toTopOf="parent">
-
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:src="@drawable/ic_calendar"
-                    app:tint="@color/gold_primary"
-                    android:contentDescription="Sunday Ritual" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="8dp"
-                    android:text="SUNDAY PLANNING DAY • Set Weekly Alarms"
-                    android:textColor="@color/gold_primary"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.08" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Plan →"
-                    android:textColor="@color/emerald_accent"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/lblWeeklyPlanHeader"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Weekly Schedule"
-                android:textColor="@color/text_primary"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                app:layout_constraintTop_toBottomOf="@id/layoutSundayLauncherBadge"
-                app:layout_constraintStart_toStartOf="parent" />
-
-            <TextView
-                android:id="@+id/tvNextAlarmBadge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Alarm Ringtone ON ⏰"
-                android:textColor="@color/gold_primary"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                app:layout_constraintBaseline_toBaselineOf="@id/lblWeeklyPlanHeader"
-                app:layout_constraintEnd_toEndOf="parent" />
-
-            <!-- Container for today's scheduled tasks preview -->
-            <LinearLayout
-                android:id="@+id/layoutWeeklyTasksPreview"
+                android:id="@+id/layoutMissionsContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginTop="10dp"
-                app:layout_constraintTop_toBottomOf="@id/lblWeeklyPlanHeader" />
-
-            <TextView
-                android:id="@+id/btnOpenWeeklyPlan"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:text="Open 7-Day Plan &amp; Alarms →"
-                android:textColor="@color/emerald_accent"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:padding="4dp"
-                app:layout_constraintTop_toBottomOf="@id/layoutWeeklyTasksPreview"
+                android:layout_marginTop="6dp"
+                app:layout_constraintTop_toBottomOf="@id/progressBarMissions"
+                app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />
+
+            <!-- Bottom Action Row: Weekly Plan + Edit Priorities -->
+            <LinearLayout
+                android:id="@+id/layoutMissionActions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="8dp"
+                app:layout_constraintTop_toBottomOf="@id/layoutMissionsContainer"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <!-- 7-Day Weekly Plan Entry Point -->
+                <TextView
+                    android:id="@+id/btnOpenWeeklyPlan"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Weekly Plan 📅 →"
+                    android:textColor="@color/emerald_accent"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:paddingVertical="4dp"
+                    android:paddingEnd="8dp"
+                    android:foreground="?attr/selectableItemBackground" />
+
+                <TextView
+                    android:id="@+id/btnSanctuaryCheckIn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Reminder 🔔"
+                    android:textColor="@color/gold_primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:paddingVertical="4dp"
+                    android:paddingHorizontal="8dp"
+                    android:foreground="?attr/selectableItemBackground" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <!-- Edit Priorities -->
+                <TextView
+                    android:id="@+id/btnEditMissions"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Edit Priorities ✏️"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="11sp"
+                    android:paddingVertical="4dp"
+                    android:paddingStart="12dp"
+                    android:foreground="?attr/selectableItemBackground" />
+            </LinearLayout>
         </androidx.constraintlayout.widget.ConstraintLayout>
 
     </LinearLayout>

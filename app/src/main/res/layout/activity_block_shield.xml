@@ -18,6 +18,7 @@
         android:contentDescription="Discipline Shield" />
 
     <TextView
+        android:id="@+id/tvShieldHeader"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
@@ -29,6 +30,7 @@
 
     <!-- Blocked App Info -->
     <LinearLayout
+        android:id="@+id/cardBlockedAppInfo"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@drawable/card_background"
@@ -67,6 +69,7 @@
 
     <!-- Scripture Anchor -->
     <LinearLayout
+        android:id="@+id/cardShieldScripture"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@drawable/card_background_elevated"

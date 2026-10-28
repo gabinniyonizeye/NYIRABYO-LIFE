@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_dark">
+
+    <!-- Ambient Breathing Background -->
+    <com.example.nyirabyolife.ui.home.AmbientGlowView
+        android:id="@+id/meditationAmbientGlow"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Top Header -->
+    <LinearLayout
+        android:id="@+id/headerMeditation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="24dp"
+        android:paddingBottom="8dp"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageButton
+            android:id="@+id/btnBack"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/pill_background"
+            android:src="@drawable/ic_close"
+            app:tint="@color/text_primary"
+            android:contentDescription="Close" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_marginEnd="40dp">
+
+            <TextView
+                android:id="@+id/tvMeditationHeaderTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="HOLY MEDITATION"
+                android:textColor="@color/gold_primary"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.14" />
+
+            <TextView
+                android:id="@+id/tvMeditationHeaderSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ABIDING IN CHRIST'S PRESENCE"
+                android:textColor="@color/text_tertiary"
+                android:textSize="10sp"
+                android:letterSpacing="0.08" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Horizontal Meditation Mode Selector (Morning, Midday, Evening, Warfare, Lectio) -->
+    <HorizontalScrollView
+        android:id="@+id/scrollModes"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:overScrollMode="never"
+        android:paddingHorizontal="16dp"
+        android:layout_marginTop="4dp"
+        app:layout_constraintTop_toBottomOf="@id/headerMeditation">
+
+        <LinearLayout
+            android:id="@+id/layoutModesContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tabModeMorning"
+                android:layout_width="wrap_content"
+                android:layout_height="34dp"
+                android:gravity="center"
+                android:paddingHorizontal="14dp"
+                android:text="🌅 Morning Dawn"
+                android:textColor="@color/gold_primary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:background="@drawable/card_background_elevated"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/tabModeMidday"
+                android:layout_width="wrap_content"
+                android:layout_height="34dp"
+                android:gravity="center"
+                android:paddingHorizontal="14dp"
+                android:text="☀️ Midday Peace"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:background="@drawable/pill_background"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/tabModeEvening"
+                android:layout_width="wrap_content"
+                android:layout_height="34dp"
+                android:gravity="center"
+                android:paddingHorizontal="14dp"
+                android:text="🌙 Evening Rest"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:background="@drawable/pill_background"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/tabModeWarfare"
+                android:layout_width="wrap_content"
+                android:layout_height="34dp"
+                android:gravity="center"
+                android:paddingHorizontal="14dp"
+                android:text="🛡️ Warfare &amp; Urge Reset"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:background="@drawable/pill_background"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/tabModeLectio"
+                android:layout_width="wrap_content"
+                android:layout_height="34dp"
+                android:gravity="center"
+                android:paddingHorizontal="14dp"
+                android:text="📖 Lectio Divina"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:background="@drawable/pill_background" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <!-- Central Sacred Breathing Aura -->
+    <com.example.nyirabyolife.ui.godfirst.SpiritualAuraView
+        android:id="@+id/auraMeditation"
+        android:layout_width="220dp"
+        android:layout_height="220dp"
+        app:layout_constraintTop_toBottomOf="@id/scrollModes"
+        app:layout_constraintBottom_toTopOf="@id/cardScriptureMeditation"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Breath Guidance & Timer overlaid in Center -->
+    <LinearLayout
+        android:id="@+id/layoutBreathCenter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        app:layout_constraintTop_toTopOf="@id/auraMeditation"
+        app:layout_constraintBottom_toBottomOf="@id/auraMeditation"
+        app:layout_constraintStart_toStartOf="@id/auraMeditation"
+        app:layout_constraintEnd_toEndOf="@id/auraMeditation">
+
+        <TextView
+            android:id="@+id/tvTimerDisplay"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="05:00"
+            android:textColor="@color/text_primary"
+            android:textSize="34sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.04" />
+
+        <TextView
+            android:id="@+id/tvBreathPrompt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Inhale God's Grace"
+            android:textColor="@color/gold_primary"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.06"
+            android:gravity="center" />
+    </LinearLayout>
+
+    <!-- Scripture Contemplation Card -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/cardScriptureMeditation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/card_background_elevated"
+        android:padding="14dp"
+        app:layout_constraintBottom_toTopOf="@id/layoutDurationPills">
+
+        <ImageView
+            android:id="@+id/ivSparkleMed"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:src="@drawable/ic_sparkle"
+            app:tint="@color/gold_primary"
+            android:contentDescription="Light"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <TextView
+            android:id="@+id/lblMeditationHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:text="SCRIPTURE TO CONTEMPLATE"
+            android:textColor="@color/gold_primary"
+            android:textSize="9sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.12"
+            app:layout_constraintTop_toTopOf="@id/ivSparkleMed"
+            app:layout_constraintBottom_toBottomOf="@id/ivSparkleMed"
+            app:layout_constraintStart_toEndOf="@id/ivSparkleMed" />
+
+        <TextView
+            android:id="@+id/tvMeditationVerse"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="“Cause me to hear thy lovingkindness in the morning; for in thee do I trust.”"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            android:lineSpacingExtra="2dp"
+            android:maxLines="3"
+            android:ellipsize="end"
+            app:layout_constraintTop_toBottomOf="@id/lblMeditationHeader"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <TextView
+            android:id="@+id/tvMeditationRef"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Psalm 143:8"
+            android:textColor="@color/gold_primary"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toBottomOf="@id/tvMeditationVerse"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <TextView
+            android:id="@+id/btnNextVerse"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Next Verse 🕊️ →"
+            android:textColor="@color/emerald_accent"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:padding="4dp"
+            app:layout_constraintBottom_toBottomOf="@id/tvMeditationRef"
+            app:layout_constraintEnd_toEndOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Duration Selection Pills (3m, 5m, 10m, 15m) -->
+    <LinearLayout
+        android:id="@+id/layoutDurationPills"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="14dp"
+        app:layout_constraintBottom_toTopOf="@id/btnStartMeditation">
+
+        <TextView
+            android:id="@+id/btnDur3"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:gravity="center"
+            android:text="3 Min"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:background="@drawable/pill_background" />
+
+        <TextView
+            android:id="@+id/btnDur5"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:gravity="center"
+            android:text="5 Min"
+            android:textColor="@color/gold_primary"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:background="@drawable/card_background_elevated" />
+
+        <TextView
+            android:id="@+id/btnDur10"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:gravity="center"
+            android:text="10 Min"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:background="@drawable/pill_background" />
+
+        <TextView
+            android:id="@+id/btnDur15"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="15 Min"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:background="@drawable/pill_background" />
+    </LinearLayout>
+
+    <!-- Begin / Pause Meditation Button -->
+    <Button
+        android:id="@+id/btnStartMeditation"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="20dp"
+        android:text="Begin Holy Meditation 🕊️"
+        android:textColor="@color/bg_dark"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.06"
+        android:backgroundTint="@color/gold_primary"
+        app:cornerRadius="12dp"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

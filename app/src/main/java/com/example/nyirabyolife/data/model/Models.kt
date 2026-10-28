@@ -7,8 +7,23 @@ data class Mission(
     val title: String,
     val isCompleted: Boolean = false,
     val date: String,
-    val orderIndex: Int = 0
-)
+    val orderIndex: Int = 0,
+    val timeHour: Int = 0,
+    val timeMinute: Int = 0,
+    val taskMode: String = "NORMAL"
+) {
+    val formattedTime: String
+        get() = "%02d:%02d".format(timeHour, timeMinute)
+
+    val modeBadgeText: String?
+        get() = when (taskMode) {
+            "STUDY_FOCUS" -> "Study Focus 🎯"
+            "SILENT_DND" -> "Silent 🔕"
+            "MEDITATION" -> "Meditation 🕊️"
+            "BEDTIME" -> "BedTime 🌙"
+            else -> null
+        }
+}
 
 data class ScriptureVerse(
     val id: Int,
@@ -28,10 +43,21 @@ data class WeeklyPlanTask(
     val isCompleted: Boolean = false,
     val weekOfYear: Int,
     val year: Int,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val taskMode: String = "NORMAL", // "NORMAL", "STUDY_FOCUS", "SILENT_DND", "MEDITATION", "BEDTIME"
+    val isDaily: Boolean = false
 ) {
     val formattedTime: String
         get() = "%02d:%02d".format(timeHour, timeMinute)
+
+    val modeBadgeText: String?
+        get() = when (taskMode) {
+            "STUDY_FOCUS" -> "Study Focus 🎯"
+            "SILENT_DND" -> "Silent 🔕"
+            "MEDITATION" -> "Meditation 🕊️"
+            "BEDTIME" -> "BedTime 🌙"
+            else -> null
+        }
 }
 
 data class ChristRevelation(

@@ -1,5 +1,6 @@
 package com.example.nyirabyolife.ui.home
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Paint
 import android.os.Bundle
@@ -33,8 +34,8 @@ import com.example.nyirabyolife.ui.godfirst.GodFirstActivity
 import com.example.nyirabyolife.ui.recovery.RecoveryActivity
 import com.example.nyirabyolife.ui.restriction.AppRestrictionsActivity
 import com.example.nyirabyolife.ui.settings.SettingsActivity
+import com.example.nyirabyolife.ui.shield.BlockShieldActivity
 import com.example.nyirabyolife.ui.weekly.WeeklyPlanActivity
-import com.example.nyirabyolife.ui.whatsapp.WhatsAppWindowActivity
 import com.example.nyirabyolife.util.TaskAlarmScheduler
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -87,6 +88,7 @@ class HomeActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         refreshAllData()
+        com.example.nyirabyolife.util.HabitationReminderManager.checkAndShowAutomaticReminders(this)
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -96,13 +98,14 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun refreshAllData() {
+        applyThemeColors()
         loadVerseOfTheDay()
         loadMissions()
         loadWeeklyPlans()
         loadFavoriteAppsDock()
         updateEscapeRoomStatus()
-        updateToolsAndWhatsAppBanner()
         updateSocialLimitsUI()
+        slideToolsBinding?.let { loadMyAppsRow(it) }
     }
 
     private fun setupViewPager() {
@@ -143,6 +146,14 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun setupTopHeaderAndDock() {
+        binding.btnTheme.setOnClickListener {
+            showThemePickerDialog()
+        }
+
+        binding.btnMeditate.setOnClickListener {
+            startActivity(Intent(this, com.example.nyirabyolife.ui.godfirst.HolyMeditationActivity::class.java))
+        }
+
         binding.btnLockMode.setOnClickListener {
             startActivity(Intent(this, com.example.nyirabyolife.ui.lock.DisciplineLockActivity::class.java))
         }
@@ -175,9 +186,105 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
+    private fun showThemePickerDialog() {
+        val themes = listOf(
+            Pair("👑 Holy Obsidian Gold (Majestic Classical Sanctuary)", PreferencesManager.THEME_HOLY_GOLD),
+            Pair("🕊️ Celestial Sanctuary (Modern Glassmorphic Cyber-Zen)", PreferencesManager.THEME_CELESTIAL_BLUE),
+            Pair("🌿 Living Vine (Organic Leaf & Habit Growth)", PreferencesManager.THEME_LIVING_VINE),
+            Pair("🍇 Royal Solitude (Monastic Minimalist & Sacred Focus)", PreferencesManager.THEME_ROYAL_AMETHYST)
+        )
+        val currentTheme = prefs.getActiveTheme()
+        val currentIndex = themes.indexOfFirst { it.second == currentTheme }.coerceAtLeast(0)
+
+        val labels = themes.map { it.first }.toTypedArray()
+        AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
+            .setTitle("Select Habitation Design & Theme")
+            .setSingleChoiceItems(labels, currentIndex) { dialog, which ->
+                val selectedTheme = themes[which].second
+                prefs.setActiveTheme(selectedTheme)
+                applyThemeColors()
+                binding.ambientGlowView.invalidate()
+                loadMissions()
+                loadVerseOfTheDay()
+                Toast.makeText(this, "Design updated: ${themes[which].first}", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun applyThemeColors() {
+        val themeColors = com.example.nyirabyolife.util.ThemeHelper.getActiveThemeColors(this)
+
+        // 1. Root & Dock Design
+        binding.tvHeaderTitle.setTextColor(themeColors.primaryAccent)
+        binding.tvHeaderSubtitle.text = themeColors.headerSubtitle
+        binding.btnMeditate.setTextColor(themeColors.primaryAccent)
+        binding.btnLockMode.setColorFilter(themeColors.primaryAccent)
+
+        binding.bottomDock.background = com.example.nyirabyolife.util.ThemeHelper.createDockDrawable(this, themeColors)
+        binding.btnOpenAppDrawer.background = com.example.nyirabyolife.util.ThemeHelper.createPillDrawable(this, themeColors)
+        binding.btnTheme.background = com.example.nyirabyolife.util.ThemeHelper.createPillDrawable(this, themeColors)
+        binding.btnMeditate.background = com.example.nyirabyolife.util.ThemeHelper.createPillDrawable(this, themeColors)
+        binding.btnLockMode.background = com.example.nyirabyolife.util.ThemeHelper.createPillDrawable(this, themeColors)
+        binding.btnSettings.background = com.example.nyirabyolife.util.ThemeHelper.createPillDrawable(this, themeColors)
+
+        // 2. Slide 1 (Daily Walk & Missions) Structural Design
+        val b = slideDailyBinding
+        if (b != null) {
+            b.tvSacredHabitationBanner.text = themeColors.clockSubtitle
+            b.tvSacredHabitationBanner.setTextColor(themeColors.primaryAccent)
+            b.textClockTime.textSize = themeColors.clockTextSizeSp
+            b.textClockTime.letterSpacing = themeColors.clockLetterSpacing
+
+            b.cardTodayWord.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, themeColors, isElevated = true)
+            b.cardTodayMission.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, themeColors, isElevated = false)
+
+            b.lblWordBadge.text = themeColors.badgeText
+            b.lblWordBadge.setTextColor(themeColors.primaryAccent)
+            b.ivSparkleGod.setColorFilter(themeColors.primaryAccent)
+            b.tvVerseRef.setTextColor(themeColors.primaryAccent)
+            b.tvReflectPrompt.text = themeColors.scriptureActionText
+            b.tvReflectPrompt.setTextColor(themeColors.secondaryAccent)
+
+            b.tvVerseText.textSize = themeColors.scriptureTextSizeSp
+            if (themeColors.scriptureItalic) {
+                b.tvVerseText.setTypeface(null, android.graphics.Typeface.ITALIC)
+            } else {
+                b.tvVerseText.setTypeface(null, android.graphics.Typeface.NORMAL)
+            }
+
+            b.tvMissionSubtitle.text = themeColors.missionsSubtitle
+            b.tvMissionSubtitle.setTextColor(themeColors.primaryAccent)
+            b.btnSanctuaryCheckIn.setTextColor(themeColors.primaryAccent)
+            b.btnOpenWeeklyPlan.setTextColor(themeColors.secondaryAccent)
+            b.tvMissionCounter.setTextColor(themeColors.secondaryAccent)
+            b.progressBarMissions.progressTintList = android.content.res.ColorStateList.valueOf(themeColors.secondaryAccent)
+        }
+
+        // 3. Slide 2 (Tools & Habit Windows) Structural Design
+        val t = slideToolsBinding
+        if (t != null) {
+            t.btnEscapeRoomBlock.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, themeColors, isElevated = true)
+            t.btnToolFaith.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, themeColors, isElevated = true)
+            t.btnToolFocus.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, themeColors, isElevated = true)
+            t.btnToolReset.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, themeColors, isElevated = true)
+            t.btnToolBible.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, themeColors, isElevated = true)
+            t.btnManageMyApps.setTextColor(themeColors.primaryAccent)
+        }
+        // 4. Slide 3 (Digital Boundaries) Structural Design
+        val s = slideSocialBinding
+        if (s != null) {
+            s.cardInstagramLimit.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, themeColors, isElevated = true)
+            s.cardTikTokLimit.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, themeColors, isElevated = true)
+            s.btnManageAllRestrictions.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, themeColors, isElevated = false)
+        }
+    }
+
     // --- SLIDE 1: DAILY WALK & MISSIONS ---
     private fun bindSlideDaily(dailyBinding: PageHomeDailyBinding) {
         slideDailyBinding = dailyBinding
+        applyThemeColors()
 
         dailyBinding.cardTodayWord.setOnClickListener {
             startActivity(Intent(this, GodFirstActivity::class.java))
@@ -191,8 +298,8 @@ class HomeActivity : AppCompatActivity() {
             startActivity(Intent(this, WeeklyPlanActivity::class.java))
         }
 
-        dailyBinding.layoutSundayLauncherBadge.setOnClickListener {
-            startActivity(Intent(this, WeeklyPlanActivity::class.java))
+        dailyBinding.btnSanctuaryCheckIn.setOnClickListener {
+            com.example.nyirabyolife.util.HabitationReminderManager.showManualHabitationReminder(this)
         }
 
         loadVerseOfTheDay()
@@ -202,110 +309,22 @@ class HomeActivity : AppCompatActivity() {
 
     private fun loadVerseOfTheDay() {
         val b = slideDailyBinding ?: return
+        val themeColors = com.example.nyirabyolife.util.ThemeHelper.getActiveThemeColors(this)
         val revelation = ScriptureRepository.getChristRevelationOfTheDay()
         b.tvRevelationTitle.text = revelation.title
         b.tvVerseText.text = "“${revelation.scripture}”"
         b.tvVerseRef.text = revelation.reference
+        b.tvVerseRef.setTextColor(themeColors.primaryAccent)
+        b.lblWordBadge.setTextColor(themeColors.primaryAccent)
+        b.ivSparkleGod.setColorFilter(themeColors.primaryAccent)
+        b.tvReflectPrompt.setTextColor(themeColors.secondaryAccent)
     }
 
     private fun loadWeeklyPlans() {
-        val b = slideDailyBinding ?: return
         val cal = Calendar.getInstance()
-        val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
         val week = cal.get(Calendar.WEEK_OF_YEAR)
         val year = cal.get(Calendar.YEAR)
-
-        // Highlight Sunday planning on Sundays
-        if (dayOfWeek == Calendar.SUNDAY) {
-            b.layoutSundayLauncherBadge.visibility = View.VISIBLE
-        } else {
-            b.layoutSundayLauncherBadge.visibility = View.GONE
-        }
-
         dbHelper.ensureDefaultSundayWeeklyPlanIfEmpty(week, year)
-        val todayTasks = dbHelper.getWeeklyTasksForDay(dayOfWeek, week, year)
-
-        // Next Alarm indicator
-        val upcomingAlarmTask = todayTasks.firstOrNull { it.isAlarmEnabled && !it.isCompleted }
-        if (upcomingAlarmTask != null) {
-            b.tvNextAlarmBadge.text = "Next: ${upcomingAlarmTask.formattedTime} ⏰"
-            b.tvNextAlarmBadge.setTextColor(ContextCompat.getColor(this, R.color.gold_primary))
-        } else {
-            val completedCount = todayTasks.count { it.isCompleted }
-            b.tvNextAlarmBadge.text = "$completedCount of ${todayTasks.size} done"
-            b.tvNextAlarmBadge.setTextColor(ContextCompat.getColor(this, R.color.emerald_accent))
-        }
-
-        b.layoutWeeklyTasksPreview.removeAllViews()
-        if (todayTasks.isEmpty()) {
-            val emptyTv = TextView(this).apply {
-                text = "No scheduled tasks today. Tap below to plan."
-                setTextColor(ContextCompat.getColor(context, R.color.text_tertiary))
-                textSize = 12f
-                setPadding(0, 4, 0, 4)
-            }
-            b.layoutWeeklyTasksPreview.addView(emptyTv)
-        } else {
-            val inflater = LayoutInflater.from(this)
-            todayTasks.take(3).forEach { task ->
-                val rowView = inflater.inflate(R.layout.item_weekly_plan_task, b.layoutWeeklyTasksPreview, false)
-                val ivCheck = rowView.findViewById<ImageView>(R.id.ivTaskCheck)
-                val tvTitle = rowView.findViewById<TextView>(R.id.tvTaskTitle)
-                val tvTime = rowView.findViewById<TextView>(R.id.tvTaskTime)
-                val btnAlarm = rowView.findViewById<android.widget.ImageButton>(R.id.btnToggleAlarm)
-                val btnDelete = rowView.findViewById<android.widget.ImageButton>(R.id.btnDeleteTask)
-                btnDelete.visibility = View.GONE // Keep launcher view clean
-
-                tvTitle.text = task.title
-                tvTime.text = task.formattedTime
-
-                if (task.isCompleted) {
-                    ivCheck.setImageResource(R.drawable.ic_check_circle)
-                    ivCheck.setColorFilter(ContextCompat.getColor(this, R.color.emerald_accent))
-                    tvTitle.paintFlags = tvTitle.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
-                    tvTitle.setTextColor(ContextCompat.getColor(this, R.color.text_tertiary))
-                } else {
-                    ivCheck.setImageResource(R.drawable.ic_circle_outline)
-                    ivCheck.setColorFilter(ContextCompat.getColor(this, R.color.text_tertiary))
-                    tvTitle.paintFlags = tvTitle.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
-                    tvTitle.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
-                }
-
-                ivCheck.setOnClickListener {
-                    val newStatus = !task.isCompleted
-                    dbHelper.updateWeeklyTaskStatus(task.id, newStatus)
-                    if (newStatus) {
-                        TaskAlarmScheduler.cancelTaskAlarm(this, task.id)
-                    } else if (task.isAlarmEnabled) {
-                        TaskAlarmScheduler.scheduleTaskAlarm(this, task.copy(isCompleted = false))
-                    }
-                    loadWeeklyPlans()
-                }
-
-                if (task.isAlarmEnabled) {
-                    btnAlarm.setColorFilter(ContextCompat.getColor(this, R.color.gold_primary))
-                    btnAlarm.alpha = 1.0f
-                } else {
-                    btnAlarm.setColorFilter(ContextCompat.getColor(this, R.color.text_muted))
-                    btnAlarm.alpha = 0.4f
-                }
-
-                btnAlarm.setOnClickListener {
-                    val newAlarm = !task.isAlarmEnabled
-                    dbHelper.toggleWeeklyTaskAlarm(task.id, newAlarm)
-                    if (newAlarm) {
-                        TaskAlarmScheduler.scheduleTaskAlarm(this, task.copy(isAlarmEnabled = true))
-                        Toast.makeText(this, "⏰ Loud Alarm primed for ${task.formattedTime}", Toast.LENGTH_SHORT).show()
-                    } else {
-                        TaskAlarmScheduler.cancelTaskAlarm(this, task.id)
-                        Toast.makeText(this, "Alarm disabled", Toast.LENGTH_SHORT).show()
-                    }
-                    loadWeeklyPlans()
-                }
-
-                b.layoutWeeklyTasksPreview.addView(rowView)
-            }
-        }
     }
 
     private fun getTodayDateString(): String {
@@ -314,73 +333,221 @@ class HomeActivity : AppCompatActivity() {
 
     private fun loadMissions() {
         val b = slideDailyBinding ?: return
+        val themeColors = com.example.nyirabyolife.util.ThemeHelper.getActiveThemeColors(this)
         val today = getTodayDateString()
-        currentMissions = dbHelper.ensureDefaultMissionsIfEmpty(today)
+        val cal = Calendar.getInstance()
+        val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
+        val week = cal.get(Calendar.WEEK_OF_YEAR)
+        val year = cal.get(Calendar.YEAR)
+
+        currentMissions = dbHelper.getSynchronizedDailyMissions(today, dayOfWeek, week, year)
 
         val completedCount = currentMissions.count { it.isCompleted }
         b.tvMissionCounter.text = "$completedCount of ${currentMissions.size} complete"
+        b.tvMissionCounter.setTextColor(themeColors.secondaryAccent)
+        b.btnOpenWeeklyPlan.setTextColor(themeColors.secondaryAccent)
+        b.btnSanctuaryCheckIn.setTextColor(themeColors.primaryAccent)
+        b.tvMissionSubtitle.setTextColor(themeColors.primaryAccent)
+        b.progressBarMissions.max = if (currentMissions.isEmpty()) 1 else currentMissions.size
         b.progressBarMissions.progress = completedCount
+        b.progressBarMissions.progressTintList = android.content.res.ColorStateList.valueOf(themeColors.secondaryAccent)
 
-        if (currentMissions.isNotEmpty()) {
-            bindMissionRow(currentMissions[0], b.tvMissionTitle1, b.ivCheck1, b.rowMission1)
-        }
-        if (currentMissions.size > 1) {
-            bindMissionRow(currentMissions[1], b.tvMissionTitle2, b.ivCheck2, b.rowMission2)
-        }
-        if (currentMissions.size > 2) {
-            bindMissionRow(currentMissions[2], b.tvMissionTitle3, b.ivCheck3, b.rowMission3)
-        }
-    }
+        b.layoutMissionsContainer.removeAllViews()
+        val weeklyTasks = dbHelper.getWeeklyTasksForDay(dayOfWeek, week, year)
 
-    private fun bindMissionRow(
-        mission: Mission,
-        tvTitle: TextView,
-        ivCheck: ImageView,
-        rowLayout: LinearLayout
-    ) {
-        tvTitle.text = mission.title
-
-        if (mission.isCompleted) {
-            ivCheck.setImageResource(R.drawable.ic_check_circle)
-            ivCheck.setColorFilter(ContextCompat.getColor(this, R.color.emerald_accent))
-            tvTitle.paintFlags = tvTitle.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
-            tvTitle.setTextColor(ContextCompat.getColor(this, R.color.text_tertiary))
-        } else {
-            ivCheck.setImageResource(R.drawable.ic_circle_outline)
-            ivCheck.setColorFilter(ContextCompat.getColor(this, R.color.text_tertiary))
-            tvTitle.paintFlags = tvTitle.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
-            tvTitle.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
+        if (currentMissions.isEmpty()) {
+            val emptyTv = TextView(this).apply {
+                text = "No priorities set today. Tap below to plan your day."
+                setTextColor(ContextCompat.getColor(context, R.color.text_tertiary))
+                textSize = 13f
+                setPadding(0, 8, 0, 8)
+            }
+            b.layoutMissionsContainer.addView(emptyTv)
+            return
         }
 
-        rowLayout.setOnClickListener {
-            val newStatus = !mission.isCompleted
-            dbHelper.updateMissionStatus(mission.id, newStatus)
-            loadMissions()
+        val density = resources.displayMetrics.density
+        for (mission in currentMissions) {
+            val matchingWeekly = weeklyTasks.find {
+                it.title.trim().equals(mission.title.trim(), ignoreCase = true)
+            } ?: weeklyTasks.getOrNull(mission.orderIndex)
+
+            val rowView = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                when (themeColors.missionRowStyle) {
+                    com.example.nyirabyolife.util.ThemeHelper.MissionRowStyle.FLOATING_CAPSULE -> {
+                        background = com.example.nyirabyolife.util.ThemeHelper.createTaskCapsuleDrawable(this@HomeActivity, themeColors, mission.isCompleted)
+                        setPadding((14 * density).toInt(), (10 * density).toInt(), (14 * density).toInt(), (10 * density).toInt())
+                        val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                            setMargins(0, (3 * density).toInt(), 0, (3 * density).toInt())
+                        }
+                        layoutParams = lp
+                    }
+                    com.example.nyirabyolife.util.ThemeHelper.MissionRowStyle.ORGANIC_BRANCH -> {
+                        setPadding((6 * density).toInt(), (8 * density).toInt(), (6 * density).toInt(), (8 * density).toInt())
+                        foreground = ContextCompat.getDrawable(context, android.R.drawable.list_selector_background)
+                    }
+                    com.example.nyirabyolife.util.ThemeHelper.MissionRowStyle.MONASTIC_MINIMAL -> {
+                        setPadding(0, (7 * density).toInt(), 0, (7 * density).toInt())
+                        foreground = ContextCompat.getDrawable(context, android.R.drawable.list_selector_background)
+                    }
+                    com.example.nyirabyolife.util.ThemeHelper.MissionRowStyle.CLASSIC_CHECKBOX -> {
+                        setPadding(0, (10 * density).toInt(), 0, (10 * density).toInt())
+                        foreground = ContextCompat.getDrawable(context, android.R.drawable.list_selector_background)
+                    }
+                }
+            }
+
+            val checkSize = when (themeColors.missionRowStyle) {
+                com.example.nyirabyolife.util.ThemeHelper.MissionRowStyle.MONASTIC_MINIMAL -> (18 * density).toInt()
+                com.example.nyirabyolife.util.ThemeHelper.MissionRowStyle.FLOATING_CAPSULE -> (20 * density).toInt()
+                else -> (22 * density).toInt()
+            }
+
+            val ivCheck = ImageView(this).apply {
+                layoutParams = LinearLayout.LayoutParams(checkSize, checkSize)
+                if (mission.isCompleted) {
+                    setImageResource(R.drawable.ic_check_circle)
+                    setColorFilter(themeColors.secondaryAccent)
+                } else {
+                    setImageResource(R.drawable.ic_circle_outline)
+                    setColorFilter(ContextCompat.getColor(context, R.color.text_tertiary))
+                }
+            }
+
+            val detailsLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginStart = (14 * density).toInt()
+                }
+            }
+
+            val rawTime = if (matchingWeekly != null) {
+                "${matchingWeekly.formattedTime}${if (matchingWeekly.isAlarmEnabled) " ⏰" else ""}"
+            } else if (mission.timeHour > 0 || mission.timeMinute > 0 || mission.title.contains("7:00")) {
+                mission.formattedTime
+            } else null
+
+            val displayTime = if (rawTime != null) {
+                when (themeColors.missionRowStyle) {
+                    com.example.nyirabyolife.util.ThemeHelper.MissionRowStyle.ORGANIC_BRANCH -> if (mission.isCompleted) "🌿 $rawTime" else "🌱 $rawTime"
+                    com.example.nyirabyolife.util.ThemeHelper.MissionRowStyle.FLOATING_CAPSULE -> "⚡ $rawTime"
+                    else -> rawTime
+                }
+            } else null
+
+            if (displayTime != null) {
+                val timeRow = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                }
+                val tvTime = TextView(this).apply {
+                    text = displayTime
+                    setTextColor(themeColors.primaryAccent)
+                    textSize = 11f
+                    paintFlags = paintFlags or Paint.FAKE_BOLD_TEXT_FLAG
+                    letterSpacing = 0.06f
+                }
+                timeRow.addView(tvTime)
+
+                val badgeText = mission.modeBadgeText ?: matchingWeekly?.modeBadgeText
+                if (badgeText != null) {
+                    val tvBadge = TextView(this).apply {
+                        text = " • $badgeText"
+                        setTextColor(themeColors.secondaryAccent)
+                        textSize = 10f
+                    }
+                    timeRow.addView(tvBadge)
+                }
+                detailsLayout.addView(timeRow)
+            }
+
+            val tvTitle = TextView(this).apply {
+                text = mission.title
+                textSize = when (themeColors.missionRowStyle) {
+                    com.example.nyirabyolife.util.ThemeHelper.MissionRowStyle.MONASTIC_MINIMAL -> 15f
+                    com.example.nyirabyolife.util.ThemeHelper.MissionRowStyle.FLOATING_CAPSULE -> 13.5f
+                    else -> 14f
+                }
+                if (mission.isCompleted) {
+                    paintFlags = paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+                    setTextColor(ContextCompat.getColor(context, R.color.text_tertiary))
+                } else {
+                    paintFlags = paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
+                    setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+                }
+            }
+            detailsLayout.addView(tvTitle)
+
+            rowView.addView(ivCheck)
+            rowView.addView(detailsLayout)
+
+            rowView.setOnClickListener {
+                val newStatus = !mission.isCompleted
+                dbHelper.updateMissionStatus(mission.id, newStatus)
+                if (matchingWeekly != null) {
+                    if (newStatus) {
+                        TaskAlarmScheduler.cancelTaskAlarm(this, matchingWeekly.id)
+                    } else if (matchingWeekly.isAlarmEnabled) {
+                        TaskAlarmScheduler.scheduleTaskAlarm(this, matchingWeekly.copy(isCompleted = false))
+                    }
+                }
+                loadMissions()
+                loadWeeklyPlans()
+            }
+
+            b.layoutMissionsContainer.addView(rowView)
         }
     }
 
     private fun promptEditMissions() {
-        if (currentMissions.size < 3) return
-
         val view = LayoutInflater.from(this).inflate(R.layout.dialog_edit_missions, null)
-        val et1 = view.findViewById<EditText>(R.id.etMission1).apply { setText(currentMissions[0].title) }
-        val et2 = view.findViewById<EditText>(R.id.etMission2).apply { setText(currentMissions[1].title) }
-        val et3 = view.findViewById<EditText>(R.id.etMission3).apply { setText(currentMissions[2].title) }
+        val et1 = view.findViewById<EditText>(R.id.etMission1).apply {
+            setText(currentMissions.getOrNull(0)?.title ?: "")
+        }
+        val et2 = view.findViewById<EditText>(R.id.etMission2).apply {
+            setText(currentMissions.getOrNull(1)?.title ?: "")
+        }
+        val et3 = view.findViewById<EditText>(R.id.etMission3).apply {
+            setText(currentMissions.getOrNull(2)?.title ?: "")
+        }
 
         AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
-            .setTitle("Set Today's 3 Priorities")
+            .setTitle("Set Today's Priorities")
             .setView(view)
-            .setPositiveButton("Save Priorities") { _, _ ->
-                val t1 = et1.text.toString().trim()
-                val t2 = et2.text.toString().trim()
-                val t3 = et3.text.toString().trim()
+            .setPositiveButton("Save & Sync") { _, _ ->
+                val titles = listOf(
+                    et1.text.toString().trim(),
+                    et2.text.toString().trim(),
+                    et3.text.toString().trim()
+                ).filter { it.isNotEmpty() }
 
-                if (t1.isNotEmpty()) dbHelper.updateMissionTitle(currentMissions[0].id, t1)
-                if (t2.isNotEmpty()) dbHelper.updateMissionTitle(currentMissions[1].id, t2)
-                if (t3.isNotEmpty()) dbHelper.updateMissionTitle(currentMissions[2].id, t3)
+                val cal = Calendar.getInstance()
+                val todayDate = getTodayDateString()
+                val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
+                val week = cal.get(Calendar.WEEK_OF_YEAR)
+                val year = cal.get(Calendar.YEAR)
+
+                val weeklyTasks = dbHelper.getWeeklyTasksForDay(dayOfWeek, week, year)
+
+                titles.forEachIndexed { index, newTitle ->
+                    if (index < currentMissions.size) {
+                        dbHelper.updateMissionTitle(currentMissions[index].id, newTitle)
+                    } else {
+                        dbHelper.saveCustomMission(todayDate, newTitle, index)
+                    }
+                    if (index < weeklyTasks.size) {
+                        dbHelper.updateWeeklyTaskTitle(weeklyTasks[index].id, newTitle)
+                    }
+                }
 
                 loadMissions()
-                Toast.makeText(this, "Daily priorities updated", Toast.LENGTH_SHORT).show()
+                loadWeeklyPlans()
+                Toast.makeText(this, "Priorities synchronized with Weekly Plan", Toast.LENGTH_SHORT).show()
+            }
+            .setNeutralButton("Open Weekly Plan") { _, _ ->
+                startActivity(Intent(this, WeeklyPlanActivity::class.java))
             }
             .setNegativeButton("Cancel", null)
             .show()
@@ -389,6 +556,7 @@ class HomeActivity : AppCompatActivity() {
     // --- SLIDE 2: TOOLS & DISCIPLINE ---
     private fun bindSlideTools(toolsBinding: PageHomeToolsBinding) {
         slideToolsBinding = toolsBinding
+        applyThemeColors()
 
         toolsBinding.btnToolFaith.setOnClickListener {
             startActivity(Intent(this, GodFirstActivity::class.java))
@@ -402,56 +570,161 @@ class HomeActivity : AppCompatActivity() {
             recoveryAuthManager.authenticate()
         }
 
-        // Tapping Social Limits smoothly slides to Slide 3 (Digital Boundaries)
-        toolsBinding.btnToolSocial.setOnClickListener {
-            binding.homeViewPager.setCurrentItem(2, true)
+        // Open BIBILIYA NTAGATIFU app directly
+        toolsBinding.btnToolBible.setOnClickListener {
+            val biblePkg = "com.bibiliya.ntagatifu"
+            val bibleIntent = packageManager.getLaunchIntentForPackage(biblePkg)
+            if (bibleIntent != null) {
+                startActivity(bibleIntent)
+            } else {
+                // App not installed — open Play Store to download it
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW,
+                        android.net.Uri.parse("market://details?id=$biblePkg")))
+                } catch (_: Exception) {
+                    startActivity(Intent(Intent.ACTION_VIEW,
+                        android.net.Uri.parse("https://play.google.com/store/apps/details?id=$biblePkg")))
+                }
+            }
         }
 
-        toolsBinding.cardWhatsAppBanner.setOnClickListener {
-            launchWhatsAppDirectly()
-        }
-
-        toolsBinding.btnLaunchWhatsAppBanner.setOnClickListener {
-            launchWhatsAppDirectly()
+        // ＋ Add button — pick an app and pin it to My Apps row
+        toolsBinding.btnManageMyApps.setOnClickListener {
+            showAddMyAppPicker()
         }
 
         toolsBinding.btnEscapeRoomBlock.setOnClickListener {
             promptEscapeRoomActivation()
         }
 
-        updateToolsAndWhatsAppBanner()
+        loadMyAppsRow(toolsBinding)
         updateEscapeRoomStatus()
     }
 
-    private fun updateToolsAndWhatsAppBanner() {
-        val b = slideToolsBinding ?: return
+    /** Populates the MY APPS horizontal row from pinned apps prefs */
+    private fun loadMyAppsRow(toolsBinding: PageHomeToolsBinding) {
+        val row = toolsBinding.layoutMyAppsRow
+        val emptyHint = toolsBinding.tvMyAppsEmpty
+        row.removeAllViews()
 
-        // WhatsApp daytime status
-        val isWhatsAppOpen = prefs.isWhatsAppWindowOpen()
-        if (isWhatsAppOpen) {
-            b.tvWhatsAppBannerStatus.text = "Open 08:00 – 20:00 • Window Active"
-            b.tvWhatsAppBannerStatus.setTextColor(ContextCompat.getColor(this, R.color.emerald_accent))
-            b.ivWhatsAppBannerIcon.setColorFilter(ContextCompat.getColor(this, R.color.emerald_accent))
-            b.btnLaunchWhatsAppBanner.text = "Open →"
-            b.btnLaunchWhatsAppBanner.setTextColor(ContextCompat.getColor(this, R.color.emerald_accent))
-        } else {
-            b.tvWhatsAppBannerStatus.text = "Closed (Outside 08:00 – 20:00) • Mindful Pause"
-            b.tvWhatsAppBannerStatus.setTextColor(ContextCompat.getColor(this, R.color.text_tertiary))
-            b.ivWhatsAppBannerIcon.setColorFilter(ContextCompat.getColor(this, R.color.text_tertiary))
-            b.btnLaunchWhatsAppBanner.text = "Mindful →"
-            b.btnLaunchWhatsAppBanner.setTextColor(ContextCompat.getColor(this, R.color.gold_primary))
+        val pinnedSet = prefs.getPinnedApps()
+        val pm = packageManager
+        val density = resources.displayMetrics.density
+        val iconSize = (56 * density).toInt()
+        val iconMargin = (10 * density).toInt()
+        val themeColors = com.example.nyirabyolife.util.ThemeHelper.getActiveThemeColors(this)
+
+        if (pinnedSet.isEmpty()) {
+            emptyHint.visibility = View.VISIBLE
+            return
         }
+        emptyHint.visibility = View.GONE
 
-        // Social Limits indicator text on card
-        val usedInsta = prefs.getAppUsageMinutesToday("com.instagram.android")
-        val usedTikTok = prefs.getAppUsageMinutesToday("com.zhiliaoapp.musically")
-        val totalSocialUsed = usedInsta + usedTikTok
-        b.tvSocialStatus.text = "Insta & TikTok • ${totalSocialUsed}m used (30m cap)"
+        pinnedSet.forEach { pkg ->
+            try {
+                val appInfo = pm.getApplicationInfo(pkg, 0)
+                val icon = pm.getApplicationIcon(appInfo)
+                val label = pm.getApplicationLabel(appInfo).toString()
+
+                val cell = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = android.view.Gravity.CENTER_HORIZONTAL
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply { setMargins(iconMargin, 0, iconMargin, 0) }
+                }
+
+                // App icon
+                val iv = ImageView(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(iconSize, iconSize)
+                    setImageDrawable(icon)
+                    background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(
+                        this@HomeActivity, themeColors, isElevated = false
+                    )
+                    setPadding(
+                        (6 * density).toInt(), (6 * density).toInt(),
+                        (6 * density).toInt(), (6 * density).toInt()
+                    )
+                    contentDescription = label
+                    setOnClickListener { launchOrBlockApp(pkg) }
+                    setOnLongClickListener {
+                        confirmRemoveMyApp(pkg, label)
+                        true
+                    }
+                }
+
+                // App label
+                val tv = TextView(this).apply {
+                    text = label.take(10)
+                    textSize = 10f
+                    setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.text_tertiary))
+                    gravity = android.view.Gravity.CENTER
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply { topMargin = (4 * density).toInt() }
+                }
+
+                cell.addView(iv)
+                cell.addView(tv)
+                row.addView(cell)
+            } catch (_: Exception) { /* app not installed */ }
+        }
+    }
+
+    /** Launches an app, or shows the block shield if restricted */
+    private fun launchOrBlockApp(pkg: String) {
+        if (prefs.isPackageBlocked(pkg, packageName)) {
+            startActivity(Intent(this, BlockShieldActivity::class.java).apply {
+                putExtra(BlockShieldActivity.EXTRA_PACKAGE_NAME, pkg)
+                putExtra(BlockShieldActivity.EXTRA_BLOCK_REASON, prefs.getBlockReason(pkg))
+            })
+            return
+        }
+        packageManager.getLaunchIntentForPackage(pkg)?.let { startActivity(it) }
+            ?: Toast.makeText(this, "App not found", Toast.LENGTH_SHORT).show()
+    }
+
+    /** Show a list of installed apps — user picks one to pin */
+    private fun showAddMyAppPicker() {
+        val pm = packageManager
+        val mainIntent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
+        val apps = pm.queryIntentActivities(mainIntent, 0)
+            .filter { it.activityInfo.packageName != packageName }
+            .sortedBy { pm.getApplicationLabel(it.activityInfo.applicationInfo).toString() }
+
+        val labels = apps.map { pm.getApplicationLabel(it.activityInfo.applicationInfo).toString() }.toTypedArray()
+
+        AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
+            .setTitle("Pin an App to My Apps")
+            .setItems(labels) { _, idx ->
+                val pkg = apps[idx].activityInfo.packageName
+                prefs.togglePinnedApp(pkg)
+                slideToolsBinding?.let { loadMyAppsRow(it) }
+                Toast.makeText(this, "\"${labels[idx]}\" added to My Apps", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    /** Long-press confirmation to remove a pinned app */
+    private fun confirmRemoveMyApp(pkg: String, label: String) {
+        AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
+            .setTitle("Remove \"$label\"?")
+            .setMessage("Remove this app from My Apps? You can always add it back.")
+            .setPositiveButton("Remove") { _, _ ->
+                prefs.togglePinnedApp(pkg)
+                slideToolsBinding?.let { loadMyAppsRow(it) }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     // --- SLIDE 3: DIGITAL BOUNDARIES (INSTAGRAM & TIKTOK 30M BUDGET) ---
     private fun bindSlideSocial(socialBinding: PageHomeSocialBinding) {
         slideSocialBinding = socialBinding
+        applyThemeColors()
 
         socialBinding.btnLaunchInstagram.setOnClickListener {
             launchInstagram()
@@ -465,13 +738,6 @@ class HomeActivity : AppCompatActivity() {
         }
         socialBinding.cardTikTokLimit.setOnClickListener {
             launchTikTok()
-        }
-
-        socialBinding.btnLaunchWhatsApp.setOnClickListener {
-            launchWhatsAppDirectly()
-        }
-        socialBinding.cardWhatsAppSchedule.setOnClickListener {
-            startActivity(Intent(this, WhatsAppWindowActivity::class.java))
         }
 
         socialBinding.btnManageAllRestrictions.setOnClickListener {
@@ -525,22 +791,6 @@ class HomeActivity : AppCompatActivity() {
             b.btnLaunchTikTok.setBackgroundResource(R.drawable.button_gold)
             b.btnLaunchTikTok.setTextColor(ContextCompat.getColor(this, R.color.bg_dark))
         }
-
-        // 3. WHATSAPP (08:00 - 20:00 schedule)
-        val isWaOpen = prefs.isWhatsAppWindowOpen()
-        if (isWaOpen) {
-            b.tvWhatsAppScheduleBadge.text = "ACTIVE (08:00 – 20:00)"
-            b.tvWhatsAppScheduleBadge.setTextColor(ContextCompat.getColor(this, R.color.emerald_accent))
-            b.tvWhatsAppScheduleNote.text = "Open for daytime communication (8 AM – 8 PM). Enjoy intentional connection."
-            b.btnLaunchWhatsApp.text = "Open WhatsApp"
-            b.btnLaunchWhatsApp.setBackgroundResource(R.drawable.button_emerald)
-        } else {
-            b.tvWhatsAppScheduleBadge.text = "CLOSED (OUTSIDE HOURS)"
-            b.tvWhatsAppScheduleBadge.setTextColor(ContextCompat.getColor(this, R.color.gold_primary))
-            b.tvWhatsAppScheduleNote.text = "Outside active daytime hours (08:00 – 20:00). Mindful pause protects rest."
-            b.btnLaunchWhatsApp.text = "Mindful Pause"
-            b.btnLaunchWhatsApp.setBackgroundResource(R.drawable.button_gold)
-        }
     }
 
     private fun launchInstagram() {
@@ -563,18 +813,18 @@ class HomeActivity : AppCompatActivity() {
         launchAppByPackage(packages, "TikTok")
     }
 
-    private fun launchWhatsAppDirectly() {
-        if (!prefs.isWhatsAppWindowOpen()) {
-            startActivity(Intent(this, WhatsAppWindowActivity::class.java))
-            return
-        }
-        val packages = listOf("com.whatsapp", "com.whatsapp.w4b")
-        launchAppByPackage(packages, "WhatsApp")
-    }
-
     private fun launchAppByPackage(packages: List<String>, appName: String) {
         val pm = packageManager
         for (pkg in packages) {
+            if (prefs.isPackageBlocked(pkg, packageName)) {
+                // All blocked apps — including WhatsApp — go straight to BlockShield. No bypass.
+                val intent = Intent(this, BlockShieldActivity::class.java).apply {
+                    putExtra(BlockShieldActivity.EXTRA_PACKAGE_NAME, pkg)
+                    putExtra(BlockShieldActivity.EXTRA_BLOCK_REASON, prefs.getBlockReason(pkg))
+                }
+                startActivity(intent)
+                return
+            }
             val intent = pm.getLaunchIntentForPackage(pkg)
             if (intent != null) {
                 startActivity(intent)
@@ -584,40 +834,69 @@ class HomeActivity : AppCompatActivity() {
         Toast.makeText(this, "$appName is not installed on this device.", Toast.LENGTH_SHORT).show()
     }
 
-    // --- FAVORITES DOCK ---
+    // --- DOCK: Always shows Phone only ---
     private fun loadFavoriteAppsDock() {
         binding.layoutFavorites.removeAllViews()
-        val pinnedSet = prefs.getPinnedApps()
         val pm = packageManager
+        val density = resources.displayMetrics.density
+        val themeColors = com.example.nyirabyolife.util.ThemeHelper.getActiveThemeColors(this)
 
-        if (pinnedSet.isEmpty()) {
-            binding.layoutFavorites.visibility = View.GONE
-            return
-        }
+        // Only the Phone (dialer) app lives in the dock above "All Applications"
+        val phonePkg = "com.google.android.dialer"
+        try {
+            val icon = pm.getApplicationIcon(phonePkg)
 
-        binding.layoutFavorites.visibility = View.VISIBLE
-
-        pinnedSet.take(5).forEach { pkg ->
-            try {
-                val icon = pm.getApplicationIcon(pkg)
-                val iv = ImageView(this).apply {
-                    layoutParams = LinearLayout.LayoutParams(96, 96).apply {
-                        setMargins(14, 0, 14, 0)
-                    }
-                    setImageDrawable(icon)
-                    contentDescription = pkg
-                    setPadding(8, 8, 8, 8)
-                    setOnClickListener {
-                        pm.getLaunchIntentForPackage(pkg)?.let { startActivity(it) }
-                    }
+            val iconSize = (44 * density).toInt() // compact — fits without scroll
+            val iv = ImageView(this).apply {
+                layoutParams = LinearLayout.LayoutParams(iconSize, iconSize)
+                setImageDrawable(icon)
+                background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(
+                    this@HomeActivity, themeColors, isElevated = false
+                )
+                setPadding(
+                    (6 * density).toInt(), (6 * density).toInt(),
+                    (6 * density).toInt(), (6 * density).toInt()
+                )
+                contentDescription = "Phone"
+                setOnClickListener {
+                    pm.getLaunchIntentForPackage(phonePkg)?.let { startActivity(it) }
                 }
-                binding.layoutFavorites.addView(iv)
-            } catch (_: Exception) {}
+            }
+
+            binding.layoutFavorites.addView(iv)
+            binding.layoutFavorites.visibility = View.VISIBLE
+        } catch (_: Exception) {
+            binding.layoutFavorites.visibility = View.GONE
         }
     }
 
     // --- ESCAPE ROOM LOCKDOWN ---
+    private fun isAccessibilityServiceEnabled(): Boolean {
+        val am = getSystemService(Context.ACCESSIBILITY_SERVICE) as? android.view.accessibility.AccessibilityManager ?: return false
+        val list = am.getEnabledAccessibilityServiceList(android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+        for (info in list) {
+            if (info.resolveInfo.serviceInfo.packageName == packageName) {
+                return true
+            }
+        }
+        return false
+    }
+
     private fun promptEscapeRoomActivation() {
+        if (!isAccessibilityServiceEnabled()) {
+            AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
+                .setTitle("Guardian Permission Needed")
+                .setMessage("To enforce the Strict 1-Hour Lockdown and block all apps, NYIRABYO Life needs Accessibility Permission enabled in system settings.\n\nOpen Settings now to turn it ON?")
+                .setPositiveButton("Open Settings") { _, _ ->
+                    try {
+                        startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    } catch (_: Exception) {}
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+            return
+        }
+
         if (prefs.isEscapeRoomActive()) {
             val remMins = (prefs.getEscapeRoomRemainingSeconds() / 60) + 1
             Toast.makeText(this, "Escape Room already active ($remMins mins remaining).", Toast.LENGTH_SHORT).show()

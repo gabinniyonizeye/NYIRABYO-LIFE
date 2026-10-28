@@ -23,18 +23,31 @@ class NyirabyoGuardianService : AccessibilityService() {
     private lateinit var prefs: PreferencesManager
     private var screenLockReceiver: ScreenLockReceiver? = null
     private var currentForegroundPackage: String? = null
+    private var currentForegroundActivity: String? = null
     private val handler = Handler(Looper.getMainLooper())
-    private val usageCheckIntervalMs = 5000L // Heartbeat every 5 seconds
+    private val usageCheckIntervalMs = 2000L // Heartbeat every 2 seconds
+
+    // Debounce: prevent rapid re-triggering of BlockShieldActivity for the same package
+    private var lastShieldPkg: String? = null
+    private var lastShieldTimeMs: Long = 0L
+    private val shieldDebounceMs = 1800L  // Don't re-show shield for same pkg within 1.8 s
+
+    // Debounce: prevent rapid re-triggering of Escape Room lock screen
+    private var lastEscapeRoomLockTimeMs: Long = 0L
 
     private val usageTrackerRunnable = object : Runnable {
         override fun run() {
             val pkg = currentForegroundPackage
             val myPkg = applicationContext.packageName
 
-            // If Escape Room is active, keep checking lockdown
+            // If Escape Room is active — heartbeat watchdog.
+            // Force back to lock screen if ANYTHING other than phone dialer or lockscreen is active.
             if (prefs.isEscapeRoomActive()) {
-                if (pkg != null && pkg != myPkg && !isSystemPhoneDialer(pkg)) {
-                    triggerEscapeRoomLockdown()
+                if (pkg != null && !isSystemPhoneDialer(pkg)) {
+                    val isLockScreen = pkg == myPkg && (currentForegroundActivity?.contains("DisciplineLockActivity") == true)
+                    if (!isLockScreen) {
+                        triggerEscapeRoomLockdown()
+                    }
                 }
             } else if (pkg != null && pkg != myPkg && !isSystemHomeOrDialer(pkg)) {
                 // Accumulate usage seconds for foreground app
@@ -82,6 +95,11 @@ class NyirabyoGuardianService : AccessibilityService() {
         val targetPkg = event.packageName?.toString() ?: return
         val myPkg = applicationContext.packageName
 
+        val className = event.className?.toString() ?: ""
+        if (className.contains("Activity") || className.contains("ui.")) {
+            currentForegroundActivity = className
+        }
+
         val previousPkg = currentForegroundPackage
         currentForegroundPackage = targetPkg
 
@@ -94,17 +112,30 @@ class NyirabyoGuardianService : AccessibilityService() {
         }
 
         // 1. ESCAPE ROOM STRICT 1-HOUR LOCKDOWN CHECK:
+        // TOTAL lockdown — ONLY DisciplineLockActivity + phone/emergency dialer allowed.
+        // Settings, browser, our own home screen — ALL blocked and redirected to lock screen.
         if (prefs.isEscapeRoomActive()) {
-            // ONLY phone calls & dialer are permitted!
-            if (isSystemPhoneDialer(targetPkg)) {
-                return // Allowed to take phone call or use dialer
-            }
-            if (targetPkg != myPkg) {
-                // Instantly shut down the unauthorized app and return to lock screen
-                killAppProcesses(targetPkg)
-                triggerEscapeRoomLockdown()
+            // Phone/emergency dialer: always pass through
+            if (isSystemPhoneDialer(targetPkg)) return
+
+            // Our own app: ONLY the DisciplineLockActivity and UrgeCheckIn are allowed.
+            if (targetPkg == myPkg) {
+                val isBlockedScreen = className.contains("HomeActivity") ||
+                                      className.contains("AppDrawerActivity") ||
+                                      className.contains("SettingsActivity") ||
+                                      className.contains("WeeklyPlanActivity") ||
+                                      className.contains("FocusActivity") ||
+                                      className.contains("GodFirstActivity")
+                if (isBlockedScreen) {
+                    triggerEscapeRoomLockdown()
+                }
                 return
             }
+
+            // Every other app (including Settings) — kill it and show lock screen
+            killAppProcesses(targetPkg)
+            triggerEscapeRoomLockdown()
+            return
         }
 
         if (targetPkg == myPkg) return
@@ -123,7 +154,7 @@ class NyirabyoGuardianService : AccessibilityService() {
             return
         }
 
-        // 4. RESTRICTED APP / FOCUS MODE / WHATSAPP WINDOWS:
+        // 4. RESTRICTED APP / FOCUS MODE / SOCIAL WINDOWS:
         if (prefs.isPackageBlocked(targetPkg, myPkg)) {
             val reason = prefs.getBlockReason(targetPkg)
             triggerShield(targetPkg, reason)
@@ -138,6 +169,12 @@ class NyirabyoGuardianService : AccessibilityService() {
     }
 
     private fun triggerEscapeRoomLockdown() {
+        val now = System.currentTimeMillis()
+        if (now - lastEscapeRoomLockTimeMs < 1200L) {
+            return
+        }
+        lastEscapeRoomLockTimeMs = now
+
         vibrateShieldAlert()
 
         val lockIntent = Intent(this, DisciplineLockActivity::class.java).apply {
@@ -156,7 +193,10 @@ class NyirabyoGuardianService : AccessibilityService() {
             "com.android.phone",
             "com.android.incallui",
             "com.google.android.incallui",
-            "com.samsung.android.incallui"
+            "com.samsung.android.incallui",
+            "com.android.server.telecom",
+            "com.google.android.emergency",
+            "com.android.emergency"
         )
         return phoneDialers.contains(pkg)
     }
@@ -180,7 +220,9 @@ class NyirabyoGuardianService : AccessibilityService() {
             "com.google.android.gms",
             "com.google.android.gsf",
             "com.google.android.packageinstaller",
-            "com.android.packageinstaller"
+            "com.android.packageinstaller",
+            // Scripture: always allowed, never killed
+            "com.bibiliya.ntagatifu"
         )
         return allowedServices.contains(pkg) || pkg.startsWith("com.android.internal")
     }
@@ -190,12 +232,21 @@ class NyirabyoGuardianService : AccessibilityService() {
     }
 
     private fun triggerShield(packageName: String, reason: String) {
+        // Debounce: if the shield is already showing for the same package, don't re-trigger
+        val now = System.currentTimeMillis()
+        if (packageName == lastShieldPkg && (now - lastShieldTimeMs) < shieldDebounceMs) {
+            return
+        }
+        lastShieldPkg = packageName
+        lastShieldTimeMs = now
+
+        // Single gentle vibration — no repeated jolts
         vibrateShieldAlert()
 
         val intent = Intent(this, BlockShieldActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)   // Reuse existing instance if on top
+            addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION) // No jarring slide animation
             putExtra(BlockShieldActivity.EXTRA_PACKAGE_NAME, packageName)
             putExtra(BlockShieldActivity.EXTRA_BLOCK_REASON, reason)
         }

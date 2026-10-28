@@ -31,6 +31,7 @@ class RecoveryActivity : AppCompatActivity() {
 
         binding.btnBack.setOnClickListener { finish() }
 
+        applyThemeColors()
         updateStreakUI()
 
         binding.cardUrgeCheckIn.setOnClickListener {
@@ -43,6 +44,15 @@ class RecoveryActivity : AppCompatActivity() {
         }
 
         loadUrgeLogs()
+    }
+
+    private fun applyThemeColors() {
+        val theme = com.example.nyirabyolife.util.ThemeHelper.getActiveThemeColors(this)
+        binding.btnBack.background = com.example.nyirabyolife.util.ThemeHelper.createPillDrawable(this, theme)
+        binding.cardCleanStreak.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, theme, isElevated = true)
+        binding.cardUrgeCheckIn.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, theme, isElevated = false)
+        binding.btnResetStreak.background = com.example.nyirabyolife.util.ThemeHelper.createPillDrawable(this, theme)
+        binding.tvCleanDaysCount.setTextColor(theme.primaryAccent)
     }
 
     override fun onResume() {
