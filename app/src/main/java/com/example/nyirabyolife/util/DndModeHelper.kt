@@ -4,9 +4,15 @@ import android.app.NotificationManager
 import android.content.Context
 import android.media.AudioManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import com.example.nyirabyolife.data.local.PreferencesManager
 
 object DndModeHelper {
+
+    // ── Heartbeat to re-enforce silence (the OS can revert ringer mode) ───────
+    private val handler = Handler(Looper.getMainLooper())
+    private var enforcementRunnable: Runnable? = null
 
     fun isDndPermissionGranted(context: Context): Boolean {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return false
@@ -18,112 +24,137 @@ object DndModeHelper {
     }
 
     /**
-     * Activates Do Not Disturb / Silence for focus or strict activities.
+     * Activates Do Not Disturb / Silence for focus activities.
      *
-     * Two-pronged approach for Android 14 compatibility:
-     *  1. Set INTERRUPTION_FILTER_NONE (total DND) if permission is granted —
-     *     this prevents the call UI / ringer from firing at the system level.
-     *  2. Force ring and notification stream volumes to 0 regardless of DND
-     *     permission — this silences the actual audio even if the system still
-     *     routes the call through.
+     * IMPORTANT — Android OS (and the Accessibility Service calling
+     * killBackgroundProcesses) can cause the AudioService / TelecomManager to
+     * reset the ringer mode back to NORMAL within seconds of us setting SILENT.
+     * To counter this, we start a repeating 3-second heartbeat that
+     * continuously re-enforces the silent state for the duration of the session.
+     *
+     * Two-pronged approach:
+     *  1. INTERRUPTION_FILTER_NONE (total DND) — if DND permission is granted.
+     *  2. RINGER_MODE_SILENT + zero STREAM_RING/STREAM_NOTIFICATION volumes.
+     *     Note: setRingerMode(SILENT) is silently downgraded to VIBRATE by Android
+     *     when DND permission is NOT granted, so it is guarded behind the check.
      *
      * All original values are saved and restored by [disableFocusDnd].
      */
     fun enableFocusDnd(context: Context, strictSilence: Boolean = false): Boolean {
-        val prefs = PreferencesManager.getInstance(context)
-        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-        val am = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        val appContext = context.applicationContext
+        val prefs = PreferencesManager.getInstance(appContext)
+        val nm = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+        val am = appContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
 
-        // ── Save originals (only once; guard against double-call) ─────────────
+        // ── Save originals once (guard against double-call) ───────────────────
         if (am != null) {
-            if (prefs.getOriginalRingerMode() == -1) {
+            if (prefs.getOriginalRingerMode() == -1)
                 prefs.saveOriginalRingerMode(am.ringerMode)
-            }
-            if (prefs.getOriginalRingVolume() == -1) {
+            if (prefs.getOriginalRingVolume() == -1)
                 prefs.saveOriginalRingVolume(am.getStreamVolume(AudioManager.STREAM_RING))
-            }
-            if (prefs.getOriginalNotifVolume() == -1) {
+            if (prefs.getOriginalNotifVolume() == -1)
                 prefs.saveOriginalNotifVolume(am.getStreamVolume(AudioManager.STREAM_NOTIFICATION))
-            }
         }
 
-        // ── Strategy 1: INTERRUPTION_FILTER_NONE (requires DND permission) ────
-        // On Android 14, INTERRUPTION_FILTER_NONE is the only reliable way to
-        // fully prevent the incoming call screen / ringer from appearing.
-        var policyChanged = false
+        // ── Apply silence now ─────────────────────────────────────────────────
+        applyFocusSilence(appContext, nm, am)
+
+        // ── Start heartbeat to re-enforce every 3 s ───────────────────────────
+        stopEnforcementHeartbeat()
+        val runnable = object : Runnable {
+            override fun run() {
+                if (PreferencesManager.getInstance(appContext).isFocusDndActive()) {
+                    applyFocusSilence(
+                        appContext,
+                        appContext.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager,
+                        appContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+                    )
+                    handler.postDelayed(this, 3000L)
+                }
+            }
+        }
+        enforcementRunnable = runnable
+        handler.postDelayed(runnable, 3000L)
+
+        prefs.setFocusDndActive(true)
+        return isDndPermissionGranted(appContext)
+    }
+
+    /**
+     * The actual silence enforcement, called once on start and then every 3 s.
+     */
+    private fun applyFocusSilence(
+        context: Context,
+        nm: NotificationManager?,
+        am: AudioManager?
+    ) {
+        // Strategy 1: INTERRUPTION_FILTER_NONE (requires DND permission)
         if (nm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
             && nm.isNotificationPolicyAccessGranted
         ) {
+            val prefs = PreferencesManager.getInstance(context)
             if (prefs.getOriginalDndFilter() == -1) {
                 prefs.saveOriginalDndFilter(nm.currentInterruptionFilter)
             }
             try {
-                // Always use INTERRUPTION_FILTER_NONE — no exceptions for calls/stars
                 nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE)
-                policyChanged = true
             } catch (_: Exception) {}
         }
 
-        // ── Strategy 2: Zero ring / notification audio ────────────────────────
-        // CRITICAL Android 6+ behaviour: setRingerMode(SILENT) WITHOUT user-granted
-        // DND permission does NOT throw — Android silently downgrades it to VIBRATE.
-        // Guard the ringer-mode change behind the same DND permission check, so we
-        // never accidentally force the device into VIBRATE mode.
+        // Strategy 2: RINGER_MODE_SILENT + zero stream volumes
+        // CRITICAL: setRingerMode(SILENT) without DND permission silently becomes
+        // RINGER_MODE_VIBRATE on Android 6+. Guard it behind the permission check.
         if (am != null) {
             if (isDndPermissionGranted(context)) {
-                // Permission granted — SILENT is safe to set
                 try { am.ringerMode = AudioManager.RINGER_MODE_SILENT } catch (_: Exception) {}
             }
-            // Always zero stream volumes — no special permission needed.
-            // This silences the audio even if RINGER_MODE_SILENT could not be set.
             try { am.setStreamVolume(AudioManager.STREAM_RING, 0, 0) } catch (_: Exception) {}
             try { am.setStreamVolume(AudioManager.STREAM_NOTIFICATION, 0, 0) } catch (_: Exception) {}
         }
+    }
 
-        prefs.setFocusDndActive(true)
-        return policyChanged
+    private fun stopEnforcementHeartbeat() {
+        enforcementRunnable?.let { handler.removeCallbacks(it) }
+        enforcementRunnable = null
     }
 
     /**
      * Restores normal sound and original DND filter when the focus session ends.
      */
     fun disableFocusDnd(context: Context) {
-        val prefs = PreferencesManager.getInstance(context)
-        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-        val am = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        val appContext = context.applicationContext
+        val prefs = PreferencesManager.getInstance(appContext)
+        val nm = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+        val am = appContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
 
-        // ── Restore stream volumes FIRST (before changing ringer mode) ─────────
+        // Stop the heartbeat FIRST so it doesn't fight the restore
+        stopEnforcementHeartbeat()
+        prefs.setFocusDndActive(false)
+
+        // ── Restore stream volumes (before ringer mode) ───────────────────────
         val origRing = prefs.getOriginalRingVolume()
         val origNotif = prefs.getOriginalNotifVolume()
         if (am != null) {
-            try {
-                if (origRing != -1) {
-                    am.setStreamVolume(AudioManager.STREAM_RING, origRing, 0)
-                }
-            } catch (_: Exception) {}
-            try {
-                if (origNotif != -1) {
-                    am.setStreamVolume(AudioManager.STREAM_NOTIFICATION, origNotif, 0)
-                }
-            } catch (_: Exception) {}
+            try { if (origRing != -1) am.setStreamVolume(AudioManager.STREAM_RING, origRing, 0) } catch (_: Exception) {}
+            try { if (origNotif != -1) am.setStreamVolume(AudioManager.STREAM_NOTIFICATION, origNotif, 0) } catch (_: Exception) {}
         }
         prefs.saveOriginalRingVolume(-1)
         prefs.saveOriginalNotifVolume(-1)
 
-        // ── Restore interruption filter ────────────────────────────────────────
+        // ── Restore interruption filter ───────────────────────────────────────
         val origFilter = prefs.getOriginalDndFilter()
         if (nm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
             && nm.isNotificationPolicyAccessGranted
         ) {
             try {
-                val targetFilter = if (origFilter != -1) origFilter
-                else NotificationManager.INTERRUPTION_FILTER_ALL
-                nm.setInterruptionFilter(targetFilter)
+                nm.setInterruptionFilter(
+                    if (origFilter != -1) origFilter else NotificationManager.INTERRUPTION_FILTER_ALL
+                )
             } catch (_: Exception) {}
         }
         prefs.saveOriginalDndFilter(-1)
 
-        // ── Restore ringer mode ────────────────────────────────────────────────
+        // ── Restore ringer mode ───────────────────────────────────────────────
         val origRinger = prefs.getOriginalRingerMode()
         if (am != null) {
             try {
@@ -131,7 +162,6 @@ object DndModeHelper {
             } catch (_: Exception) {}
         }
         prefs.saveOriginalRingerMode(-1)
-
-        prefs.setFocusDndActive(false)
     }
 }
+
