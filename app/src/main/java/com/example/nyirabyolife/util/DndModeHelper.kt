@@ -82,32 +82,38 @@ object DndModeHelper {
 
     /**
      * The actual silence enforcement, called once on start and then every 3 s.
+     *
+     * CRITICAL: Do NOT call both setInterruptionFilter() and setRingerMode().
+     * Calling setRingerMode() triggers ZenModeHelper.onSetRingerModeInternal()
+     * which immediately re-applies the previous ZenConfig, overriding our
+     * INTERRUPTION_FILTER_NONE. They fight each other.
+     *
+     * Rule: if DND permission is granted → setInterruptionFilter(NONE) only, return.
+     *       if NOT granted              → zero stream volumes only (stops audio, not vibration).
      */
     private fun applyFocusSilence(
         context: Context,
         nm: NotificationManager?,
         am: AudioManager?
     ) {
-        // Strategy 1: INTERRUPTION_FILTER_NONE (requires DND permission)
-        if (nm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
-            && nm.isNotificationPolicyAccessGranted
-        ) {
+        val dndGranted = isDndPermissionGranted(context)
+
+        // Strategy 1: INTERRUPTION_FILTER_NONE — handles everything at system level.
+        // Return immediately after; calling setRingerMode after this overrides the filter.
+        if (nm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && dndGranted) {
             val prefs = PreferencesManager.getInstance(context)
             if (prefs.getOriginalDndFilter() == -1) {
                 prefs.saveOriginalDndFilter(nm.currentInterruptionFilter)
             }
             try {
                 nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE)
+                return   // ← early return: FILTER_NONE already blocks calls + vibration
             } catch (_: Exception) {}
         }
 
-        // Strategy 2: RINGER_MODE_SILENT + zero stream volumes
-        // CRITICAL: setRingerMode(SILENT) without DND permission silently becomes
-        // RINGER_MODE_VIBRATE on Android 6+. Guard it behind the permission check.
+        // Strategy 2 (fallback — no DND permission): zero stream volumes to at least
+        // suppress audio. Vibration cannot be stopped without DND permission on Android 6+.
         if (am != null) {
-            if (isDndPermissionGranted(context)) {
-                try { am.ringerMode = AudioManager.RINGER_MODE_SILENT } catch (_: Exception) {}
-            }
             try { am.setStreamVolume(AudioManager.STREAM_RING, 0, 0) } catch (_: Exception) {}
             try { am.setStreamVolume(AudioManager.STREAM_NOTIFICATION, 0, 0) } catch (_: Exception) {}
         }
