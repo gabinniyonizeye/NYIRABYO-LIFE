@@ -65,24 +65,32 @@ object DndModeHelper {
         }
 
         // ── Strategy 2: Zero the ring volume (works with or without DND perm) ─
-        // FLAG_REMOVE_SOUND_AND_VIBRATE stops any currently-playing ringtone/vibration.
+        // Each call is in its own try-catch so a SecurityException on ringerMode
+        // (requires DND perm on Android 6+) does NOT skip the volume zeroing.
+        // FLAG_REMOVE_SOUND_AND_VIBRATE stops any ringtone already playing.
         if (am != null) {
+            // Set RINGER_MODE_SILENT (needs DND permission; may fail — that's OK)
             try {
                 am.ringerMode = AudioManager.RINGER_MODE_SILENT
+            } catch (_: Exception) {
+                // DND permission not granted; audio stream zeroing below handles silence
+            }
+            // Zero ring volume — always works, no special permission required
+            try {
                 am.setStreamVolume(
                     AudioManager.STREAM_RING,
                     0,
                     AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE
                 )
+            } catch (_: Exception) {}
+            // Zero notification volume
+            try {
                 am.setStreamVolume(
                     AudioManager.STREAM_NOTIFICATION,
                     0,
                     0
                 )
-            } catch (_: Exception) {
-                // Fallback if SILENT is not allowed (some OEM policies)
-                try { am.ringerMode = AudioManager.RINGER_MODE_VIBRATE } catch (_: Exception) {}
-            }
+            } catch (_: Exception) {}
         }
 
         prefs.setFocusDndActive(true)
