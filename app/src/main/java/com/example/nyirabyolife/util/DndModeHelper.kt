@@ -64,33 +64,20 @@ object DndModeHelper {
             } catch (_: Exception) {}
         }
 
-        // ── Strategy 2: Zero the ring volume (works with or without DND perm) ─
-        // Each call is in its own try-catch so a SecurityException on ringerMode
-        // (requires DND perm on Android 6+) does NOT skip the volume zeroing.
-        // FLAG_REMOVE_SOUND_AND_VIBRATE stops any ringtone already playing.
+        // ── Strategy 2: Zero ring / notification audio ────────────────────────
+        // CRITICAL Android 6+ behaviour: setRingerMode(SILENT) WITHOUT user-granted
+        // DND permission does NOT throw — Android silently downgrades it to VIBRATE.
+        // Guard the ringer-mode change behind the same DND permission check, so we
+        // never accidentally force the device into VIBRATE mode.
         if (am != null) {
-            // Set RINGER_MODE_SILENT (needs DND permission; may fail — that's OK)
-            try {
-                am.ringerMode = AudioManager.RINGER_MODE_SILENT
-            } catch (_: Exception) {
-                // DND permission not granted; audio stream zeroing below handles silence
+            if (isDndPermissionGranted(context)) {
+                // Permission granted — SILENT is safe to set
+                try { am.ringerMode = AudioManager.RINGER_MODE_SILENT } catch (_: Exception) {}
             }
-            // Zero ring volume — always works, no special permission required
-            try {
-                am.setStreamVolume(
-                    AudioManager.STREAM_RING,
-                    0,
-                    AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE
-                )
-            } catch (_: Exception) {}
-            // Zero notification volume
-            try {
-                am.setStreamVolume(
-                    AudioManager.STREAM_NOTIFICATION,
-                    0,
-                    0
-                )
-            } catch (_: Exception) {}
+            // Always zero stream volumes — no special permission needed.
+            // This silences the audio even if RINGER_MODE_SILENT could not be set.
+            try { am.setStreamVolume(AudioManager.STREAM_RING, 0, 0) } catch (_: Exception) {}
+            try { am.setStreamVolume(AudioManager.STREAM_NOTIFICATION, 0, 0) } catch (_: Exception) {}
         }
 
         prefs.setFocusDndActive(true)
