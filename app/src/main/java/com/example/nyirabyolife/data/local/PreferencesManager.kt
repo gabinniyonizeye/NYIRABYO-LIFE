@@ -25,6 +25,14 @@ class PreferencesManager(context: Context) {
         private const val KEY_SETTINGS_PROTECTION_ENABLED = "key_settings_protection_enabled"
         private const val KEY_ACTIVE_FOCUS_UNTIL = "key_active_focus_until"
         private const val KEY_ACTIVE_FOCUS_MODE = "key_active_focus_mode"
+        private const val KEY_ACTIVE_FOCUS_TITLE = "key_active_focus_title"
+        private const val KEY_ACTIVE_FOCUS_TASK_ID = "key_active_focus_task_id"
+        private const val KEY_ACTIVE_FOCUS_TOTAL_MINUTES = "key_active_focus_total_minutes"
+        private const val KEY_ORIGINAL_DND_FILTER = "key_original_dnd_filter"
+        private const val KEY_ORIGINAL_RINGER_MODE = "key_original_ringer_mode"
+        private const val KEY_ORIGINAL_RING_VOLUME = "key_original_ring_volume"
+        private const val KEY_ORIGINAL_NOTIF_VOLUME = "key_original_notif_volume"
+        private const val KEY_FOCUS_DND_ACTIVE = "key_focus_dnd_active"
         private const val KEY_LOCK_SCREEN_ENABLED = "key_lock_screen_enabled"
         private const val KEY_SETTINGS_PIN_LOCK = "key_settings_pin_lock"
         private const val KEY_TEMP_UNLOCK_PKG = "key_temp_unlock_pkg"
@@ -253,11 +261,14 @@ class PreferencesManager(context: Context) {
     }
 
     // --- FOCUS MODE ACTIVE BLOCKING ---
-    fun setActiveFocusSession(durationMinutes: Int, mode: String) {
+    fun setActiveFocusSession(durationMinutes: Int, mode: String, title: String = "", taskId: Long = -1L) {
         val until = System.currentTimeMillis() + (durationMinutes * 60 * 1000L)
         prefs.edit()
             .putLong(KEY_ACTIVE_FOCUS_UNTIL, until)
             .putString(KEY_ACTIVE_FOCUS_MODE, mode)
+            .putString(KEY_ACTIVE_FOCUS_TITLE, title)
+            .putLong(KEY_ACTIVE_FOCUS_TASK_ID, taskId)
+            .putInt(KEY_ACTIVE_FOCUS_TOTAL_MINUTES, durationMinutes)
             .apply()
     }
 
@@ -265,6 +276,11 @@ class PreferencesManager(context: Context) {
         prefs.edit()
             .remove(KEY_ACTIVE_FOCUS_UNTIL)
             .remove(KEY_ACTIVE_FOCUS_MODE)
+            .remove(KEY_ACTIVE_FOCUS_TITLE)
+            .remove(KEY_ACTIVE_FOCUS_TASK_ID)
+            .remove(KEY_ACTIVE_FOCUS_TOTAL_MINUTES)
+            .remove(KEY_ORIGINAL_RING_VOLUME)
+            .remove(KEY_ORIGINAL_NOTIF_VOLUME)
             .apply()
     }
 
@@ -277,10 +293,63 @@ class PreferencesManager(context: Context) {
         return prefs.getString(KEY_ACTIVE_FOCUS_MODE, "Deep Focus") ?: "Deep Focus"
     }
 
+    fun getActiveFocusTitle(): String {
+        return prefs.getString(KEY_ACTIVE_FOCUS_TITLE, "") ?: ""
+    }
+
+    fun getActiveFocusTaskId(): Long {
+        return prefs.getLong(KEY_ACTIVE_FOCUS_TASK_ID, -1L)
+    }
+
+    fun getActiveFocusTotalMinutes(): Int {
+        return prefs.getInt(KEY_ACTIVE_FOCUS_TOTAL_MINUTES, 60)
+    }
+
     fun getFocusRemainingSeconds(): Int {
         val until = prefs.getLong(KEY_ACTIVE_FOCUS_UNTIL, 0L)
         val remaining = (until - System.currentTimeMillis()) / 1000
         return if (remaining > 0) remaining.toInt() else 0
+    }
+
+    // --- DND / SILENCE PERSISTENCE ---
+    fun saveOriginalDndFilter(filter: Int) {
+        prefs.edit().putInt(KEY_ORIGINAL_DND_FILTER, filter).apply()
+    }
+
+    fun getOriginalDndFilter(): Int {
+        return prefs.getInt(KEY_ORIGINAL_DND_FILTER, -1)
+    }
+
+    fun saveOriginalRingerMode(mode: Int) {
+        prefs.edit().putInt(KEY_ORIGINAL_RINGER_MODE, mode).apply()
+    }
+
+    fun getOriginalRingerMode(): Int {
+        return prefs.getInt(KEY_ORIGINAL_RINGER_MODE, -1)
+    }
+
+    fun saveOriginalRingVolume(vol: Int) {
+        prefs.edit().putInt(KEY_ORIGINAL_RING_VOLUME, vol).apply()
+    }
+
+    fun getOriginalRingVolume(): Int {
+        return prefs.getInt(KEY_ORIGINAL_RING_VOLUME, -1)
+    }
+
+    fun saveOriginalNotifVolume(vol: Int) {
+        prefs.edit().putInt(KEY_ORIGINAL_NOTIF_VOLUME, vol).apply()
+    }
+
+    fun getOriginalNotifVolume(): Int {
+        return prefs.getInt(KEY_ORIGINAL_NOTIF_VOLUME, -1)
+    }
+
+    fun setFocusDndActive(active: Boolean) {
+        prefs.edit().putBoolean(KEY_FOCUS_DND_ACTIVE, active).apply()
+    }
+
+    fun isFocusDndActive(): Boolean {
+        return prefs.getBoolean(KEY_FOCUS_DND_ACTIVE, false)
     }
 
     // --- TEMPORARY UNLOCK (e.g. 2 minutes intentional access) ---
