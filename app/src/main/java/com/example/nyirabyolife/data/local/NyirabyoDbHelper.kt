@@ -17,11 +17,11 @@ import java.util.Locale
 import org.json.JSONArray
 import org.json.JSONObject
 
-class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
         const val DATABASE_NAME = "nyirabyo_life.db"
-        const val DATABASE_VERSION = 3
+        const val DATABASE_VERSION = 4
 
         @Volatile
         private var instance: NyirabyoDbHelper? = null
@@ -41,9 +41,11 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
     private fun ensureColumnsExist(db: SQLiteDatabase) {
         try { db.execSQL("ALTER TABLE weekly_plans ADD COLUMN task_mode TEXT DEFAULT 'NORMAL'") } catch (_: Exception) {}
         try { db.execSQL("ALTER TABLE weekly_plans ADD COLUMN is_daily INTEGER DEFAULT 0") } catch (_: Exception) {}
+        try { db.execSQL("ALTER TABLE weekly_plans ADD COLUMN duration_minutes INTEGER DEFAULT 60") } catch (_: Exception) {}
         try { db.execSQL("ALTER TABLE missions ADD COLUMN time_hour INTEGER NOT NULL DEFAULT 0") } catch (_: Exception) {}
         try { db.execSQL("ALTER TABLE missions ADD COLUMN time_minute INTEGER NOT NULL DEFAULT 0") } catch (_: Exception) {}
         try { db.execSQL("ALTER TABLE missions ADD COLUMN task_mode TEXT DEFAULT 'NORMAL'") } catch (_: Exception) {}
+        try { db.execSQL("ALTER TABLE missions ADD COLUMN duration_minutes INTEGER DEFAULT 60") } catch (_: Exception) {}
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -56,7 +58,8 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
                 order_index INTEGER NOT NULL DEFAULT 0,
                 time_hour INTEGER NOT NULL DEFAULT 0,
                 time_minute INTEGER NOT NULL DEFAULT 0,
-                task_mode TEXT DEFAULT 'NORMAL'
+                task_mode TEXT DEFAULT 'NORMAL',
+                duration_minutes INTEGER NOT NULL DEFAULT 60
             )
         """.trimIndent())
 
@@ -112,7 +115,8 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
                 year INTEGER NOT NULL,
                 created_at INTEGER NOT NULL,
                 task_mode TEXT DEFAULT 'NORMAL',
-                is_daily INTEGER DEFAULT 0
+                is_daily INTEGER DEFAULT 0,
+                duration_minutes INTEGER DEFAULT 60
             )
         """.trimIndent())
     }
@@ -146,7 +150,9 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
                 val min = if (mIdx != -1) it.getInt(mIdx) else 0
                 val modeIdx = it.getColumnIndex("task_mode")
                 val mode = if (modeIdx != -1) it.getString(modeIdx) ?: "NORMAL" else "NORMAL"
-                list.add(Mission(id = id, title = title, isCompleted = completed, date = date, orderIndex = order, timeHour = hour, timeMinute = min, taskMode = mode))
+                val durIdx = it.getColumnIndex("duration_minutes")
+                val dur = if (durIdx != -1) it.getInt(durIdx) else 0
+                list.add(Mission(id = id, title = title, isCompleted = completed, date = date, orderIndex = order, timeHour = hour, timeMinute = min, taskMode = mode, durationMinutes = dur))
             }
         }
         return list
@@ -168,13 +174,17 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
                 val min = if (mIdx != -1) it.getInt(mIdx) else 0
                 val modeIdx = it.getColumnIndex("task_mode")
                 val mode = if (modeIdx != -1) it.getString(modeIdx) ?: "NORMAL" else "NORMAL"
-                return Mission(id = mId, title = title, isCompleted = completed, date = date, orderIndex = order, timeHour = hour, timeMinute = min, taskMode = mode)
+                val durIdx = it.getColumnIndex("duration_minutes")
+                val dur = if (durIdx != -1) it.getInt(durIdx) else 0
+                return Mission(id = mId, title = title, isCompleted = completed, date = date, orderIndex = order, timeHour = hour, timeMinute = min, taskMode = mode, durationMinutes = dur)
             }
         }
         return null
     }
 
     fun ensureFoundationTasksForDay(dayOfWeek: Int, weekOfYear: Int, year: Int) {
+        if (PreferencesManager.getInstance(context).isTasksCustomizedByUser()) return
+
         val tasks = getWeeklyTasksForDay(dayOfWeek, weekOfYear, year)
         val titles = tasks.map { it.title.trim().lowercase() }.toSet()
 
@@ -228,8 +238,10 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
     }
 
     fun getSynchronizedDailyMissions(date: String, dayOfWeek: Int, weekOfYear: Int, year: Int): List<Mission> {
-        ensureDefaultSundayWeeklyPlanIfEmpty(weekOfYear, year)
-        ensureFoundationTasksForDay(dayOfWeek, weekOfYear, year)
+        if (!PreferencesManager.getInstance(context).isTasksCustomizedByUser()) {
+            ensureDefaultSundayWeeklyPlanIfEmpty(weekOfYear, year)
+            ensureFoundationTasksForDay(dayOfWeek, weekOfYear, year)
+        }
 
         // Strict rule: arrange tasks chronologically by time (first to come first on the list)
         val weeklyTasks = getWeeklyTasksForDay(dayOfWeek, weekOfYear, year)
@@ -256,6 +268,7 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
                     put("time_hour", task.timeHour)
                     put("time_minute", task.timeMinute)
                     put("task_mode", task.taskMode)
+                    put("duration_minutes", task.durationMinutes)
                 }
                 db.insert("missions", null, values)
             }
@@ -269,7 +282,7 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
 
     fun ensureDefaultMissionsIfEmpty(date: String): List<Mission> {
         val existing = getMissionsForDate(date)
-        if (existing.isNotEmpty()) return existing
+        if (existing.isNotEmpty() || PreferencesManager.getInstance(context).isTasksCustomizedByUser()) return existing
 
         val defaults = listOf(
             "Pray and read Scripture",
@@ -331,7 +344,7 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
         db.update("missions", values, "id = ?", arrayOf(id.toString()))
     }
 
-    fun saveCustomMission(date: String, title: String, orderIndex: Int, timeHour: Int = 0, timeMinute: Int = 0, taskMode: String = "NORMAL"): Long {
+    fun saveCustomMission(date: String, title: String, orderIndex: Int, timeHour: Int = 0, timeMinute: Int = 0, taskMode: String = "NORMAL", durationMinutes: Int = 60): Long {
         val db = writableDatabase
         val values = ContentValues().apply {
             put("title", title)
@@ -341,6 +354,7 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
             put("time_hour", timeHour)
             put("time_minute", timeMinute)
             put("task_mode", taskMode)
+            put("duration_minutes", durationMinutes)
         }
         return db.insert("missions", null, values)
     }
@@ -605,6 +619,7 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
             put("created_at", System.currentTimeMillis())
             put("task_mode", task.taskMode)
             put("is_daily", if (task.isDaily) 1 else 0)
+            put("duration_minutes", task.durationMinutes)
         }
         val newId = db.insert("weekly_plans", null, values)
 
@@ -621,9 +636,11 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
                 orderIndex = existing.size,
                 timeHour = task.timeHour,
                 timeMinute = task.timeMinute,
-                taskMode = task.taskMode
+                taskMode = task.taskMode,
+                durationMinutes = task.durationMinutes
             )
         }
+        PreferencesManager.getInstance(context).setTasksCustomizedByUser(true)
         return newId
     }
 
@@ -663,6 +680,53 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
         }
     }
 
+    fun updateWeeklyTask(task: WeeklyPlanTask) {
+        val oldTask = getWeeklyTaskById(task.id)
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put("title", task.title)
+            put("day_of_week", task.dayOfWeek)
+            put("time_hour", task.timeHour)
+            put("time_minute", task.timeMinute)
+            put("is_alarm_enabled", if (task.isAlarmEnabled) 1 else 0)
+            put("task_mode", task.taskMode)
+            put("is_daily", if (task.isDaily) 1 else 0)
+            put("duration_minutes", task.durationMinutes)
+        }
+        db.update("weekly_plans", values, "id = ?", arrayOf(task.id.toString()))
+        PreferencesManager.getInstance(context).setTasksCustomizedByUser(true)
+
+        if (oldTask != null) {
+            val cal = Calendar.getInstance()
+            if (oldTask.dayOfWeek == cal.get(Calendar.DAY_OF_WEEK) &&
+                oldTask.weekOfYear == cal.get(Calendar.WEEK_OF_YEAR) &&
+                oldTask.year == cal.get(Calendar.YEAR)) {
+                val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                val mValues = ContentValues().apply {
+                    put("title", task.title)
+                    put("time_hour", task.timeHour)
+                    put("time_minute", task.timeMinute)
+                    put("task_mode", task.taskMode)
+                    put("duration_minutes", task.durationMinutes)
+                }
+                db.update("missions", mValues, "date = ? AND title = ?", arrayOf(todayDate, oldTask.title))
+            }
+        }
+    }
+
+    fun resetAllTasks() {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            db.delete("weekly_plans", null, null)
+            db.delete("missions", null, null)
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        PreferencesManager.getInstance(context).setTasksCustomizedByUser(true)
+    }
+
     fun updateWeeklyTaskTitle(id: Long, newTitle: String) {
         val db = writableDatabase
         val values = ContentValues().apply {
@@ -699,6 +763,8 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
         val taskMode = if (modeIdx != -1) cursor.getString(modeIdx) ?: "NORMAL" else "NORMAL"
         val dailyIdx = cursor.getColumnIndex("is_daily")
         val isDaily = if (dailyIdx != -1) cursor.getInt(dailyIdx) == 1 else false
+        val durIdx = cursor.getColumnIndex("duration_minutes")
+        val durationMinutes = if (durIdx != -1) cursor.getInt(durIdx) else 0
 
         return WeeklyPlanTask(
             id = cursor.getLong(cursor.getColumnIndexOrThrow("id")),
@@ -712,18 +778,15 @@ class NyirabyoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
             year = cursor.getInt(cursor.getColumnIndexOrThrow("year")),
             createdAt = cursor.getLong(cursor.getColumnIndexOrThrow("created_at")),
             taskMode = taskMode,
-            isDaily = isDaily
+            isDaily = isDaily,
+            durationMinutes = durationMinutes
         )
     }
 
     fun ensureDefaultSundayWeeklyPlanIfEmpty(weekOfYear: Int, year: Int): List<WeeklyPlanTask> {
         val existing = getWeeklyTasksForWeek(weekOfYear, year)
-        if (existing.isNotEmpty()) {
-            // Also ensure foundational tasks exist for every day of the week
-            for (day in Calendar.SUNDAY..Calendar.SATURDAY) {
-                ensureFoundationTasksForDay(day, weekOfYear, year)
-            }
-            return getWeeklyTasksForWeek(weekOfYear, year)
+        if (existing.isNotEmpty() || PreferencesManager.getInstance(context).isTasksCustomizedByUser()) {
+            return existing
         }
 
         // 1. Seed 3 foundational tasks for all 7 days

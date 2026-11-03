@@ -119,9 +119,11 @@ class DisciplineLockActivity : AppCompatActivity() {
 
     private fun applyThemeColors() {
         val themeColors = ThemeHelper.getActiveThemeColors(this)
+        binding.root.setBackgroundColor(themeColors.background)
         binding.tvLockTitle.setTextColor(themeColors.primaryAccent)
         binding.tvLockVerseRef.setTextColor(themeColors.primaryAccent)
         binding.tvLockMissionSummary.setTextColor(themeColors.secondaryAccent)
+        binding.tvLockScheduleHeader.setTextColor(themeColors.primaryAccent)
 
         binding.cardLockVerse.background = ThemeHelper.createCardDrawable(this, themeColors, isElevated = true)
         binding.cardLockMissions.background = ThemeHelper.createCardDrawable(this, themeColors, isElevated = false)
@@ -204,56 +206,92 @@ class DisciplineLockActivity : AppCompatActivity() {
         currentMissions = dbHelper.getSynchronizedDailyMissions(today, dayOfWeek, week, year)
 
         val completed = currentMissions.count { it.isCompleted }
-        binding.tvLockMissionSummary.text = "$completed of ${currentMissions.size} complete"
+        binding.tvLockMissionSummary.text = if (currentMissions.isEmpty()) "No tasks" else "$completed of ${currentMissions.size} complete"
         binding.tvLockMissionSummary.setTextColor(themeColors.secondaryAccent)
 
-        if (currentMissions.isNotEmpty()) {
-            binding.rowLockMission1.visibility = android.view.View.VISIBLE
-            bindMissionRow(currentMissions[0], binding.tvLockMissionTitle1, binding.ivLockCheck1, binding.rowLockMission1)
-        } else {
-            binding.rowLockMission1.visibility = android.view.View.GONE
+        binding.layoutLockMissionsContainer.removeAllViews()
+
+        if (currentMissions.isEmpty()) {
+            binding.tvLockEmptySchedule.visibility = View.VISIBLE
+            binding.layoutLockMissionsContainer.addView(binding.tvLockEmptySchedule)
+            return
         }
 
-        if (currentMissions.size > 1) {
-            binding.rowLockMission2.visibility = android.view.View.VISIBLE
-            bindMissionRow(currentMissions[1], binding.tvLockMissionTitle2, binding.ivLockCheck2, binding.rowLockMission2)
-        } else {
-            binding.rowLockMission2.visibility = android.view.View.GONE
-        }
+        binding.tvLockEmptySchedule.visibility = View.GONE
+        val density = resources.displayMetrics.density
 
-        if (currentMissions.size > 2) {
-            binding.rowLockMission3.visibility = android.view.View.VISIBLE
-            bindMissionRow(currentMissions[2], binding.tvLockMissionTitle3, binding.ivLockCheck3, binding.rowLockMission3)
-        } else {
-            binding.rowLockMission3.visibility = android.view.View.GONE
-        }
-    }
+        currentMissions.forEach { mission ->
+            val rowLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding((6 * density).toInt(), (8 * density).toInt(), (6 * density).toInt(), (8 * density).toInt())
+                background = ContextCompat.getDrawable(this@DisciplineLockActivity, android.R.drawable.list_selector_background)
+            }
 
-    private fun bindMissionRow(
-        mission: Mission,
-        tvTitle: TextView,
-        ivCheck: ImageView,
-        rowLayout: LinearLayout
-    ) {
-        val themeColors = ThemeHelper.getActiveThemeColors(this)
-        tvTitle.text = mission.title
+            val ivCheck = ImageView(this).apply {
+                layoutParams = LinearLayout.LayoutParams((20 * density).toInt(), (20 * density).toInt())
+                if (mission.isCompleted) {
+                    setImageResource(R.drawable.ic_check_circle)
+                    setColorFilter(themeColors.secondaryAccent)
+                } else {
+                    setImageResource(R.drawable.ic_circle_outline)
+                    setColorFilter(ContextCompat.getColor(context, R.color.text_tertiary))
+                }
+            }
 
-        if (mission.isCompleted) {
-            ivCheck.setImageResource(R.drawable.ic_check_circle)
-            ivCheck.setColorFilter(themeColors.secondaryAccent)
-            tvTitle.paintFlags = tvTitle.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
-            tvTitle.setTextColor(ContextCompat.getColor(this, R.color.text_tertiary))
-        } else {
-            ivCheck.setImageResource(R.drawable.ic_circle_outline)
-            ivCheck.setColorFilter(ContextCompat.getColor(this, R.color.text_tertiary))
-            tvTitle.paintFlags = tvTitle.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
-            tvTitle.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
-        }
+            val textLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginStart = (10 * density).toInt()
+                }
+            }
 
-        rowLayout.setOnClickListener {
-            val newStatus = !mission.isCompleted
-            dbHelper.updateMissionStatus(mission.id, newStatus)
-            loadMissions()
+            val tvTitle = TextView(this).apply {
+                text = mission.title
+                textSize = 13.5f
+                if (mission.isCompleted) {
+                    paintFlags = paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+                    setTextColor(ContextCompat.getColor(context, R.color.text_tertiary))
+                } else {
+                    paintFlags = paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
+                    setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                }
+            }
+
+            val timeDetails = buildString {
+                if (mission.durationMinutes > 0) {
+                    append(mission.formattedTimeRange)
+                } else {
+                    append(mission.formattedTime)
+                    append(" • Direct Alarm")
+                }
+                mission.modeBadgeText?.let {
+                    append(" • ")
+                    append(it)
+                }
+            }
+
+            val tvTime = TextView(this).apply {
+                text = timeDetails
+                textSize = 11f
+                setTextColor(themeColors.primaryAccent)
+                alpha = if (mission.isCompleted) 0.5f else 0.9f
+            }
+
+            textLayout.addView(tvTitle)
+            textLayout.addView(tvTime)
+
+            rowLayout.addView(ivCheck)
+            rowLayout.addView(textLayout)
+
+            rowLayout.setOnClickListener {
+                val newStatus = !mission.isCompleted
+                dbHelper.updateMissionStatus(mission.id, newStatus)
+                loadMissions()
+            }
+
+            binding.layoutLockMissionsContainer.addView(rowLayout)
         }
     }
 

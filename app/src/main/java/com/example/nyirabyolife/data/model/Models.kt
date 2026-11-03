@@ -10,10 +10,34 @@ data class Mission(
     val orderIndex: Int = 0,
     val timeHour: Int = 0,
     val timeMinute: Int = 0,
-    val taskMode: String = "NORMAL"
+    val taskMode: String = "NORMAL",
+    val durationMinutes: Int = 0
 ) {
     val formattedTime: String
         get() = "%02d:%02d".format(timeHour, timeMinute)
+
+    val endHour: Int
+        get() = (timeHour + (timeMinute + durationMinutes) / 60) % 24
+
+    val endMinute: Int
+        get() = (timeMinute + durationMinutes) % 60
+
+    val formattedEndTime: String
+        get() = "%02d:%02d".format(endHour, endMinute)
+
+    val formattedDuration: String
+        get() {
+            val h = durationMinutes / 60
+            val m = durationMinutes % 60
+            return when {
+                h > 0 && m > 0 -> "${h}h ${m}m"
+                h > 0 -> "${h}h"
+                else -> "${m}m"
+            }
+        }
+
+    val formattedTimeRange: String
+        get() = if (durationMinutes > 0) "$formattedTime - $formattedEndTime ($formattedDuration)" else "$formattedTime • Direct Alarm"
 
     val modeBadgeText: String?
         get() = when (taskMode) {
@@ -45,10 +69,34 @@ data class WeeklyPlanTask(
     val year: Int,
     val createdAt: Long = System.currentTimeMillis(),
     val taskMode: String = "NORMAL", // "NORMAL", "STUDY_FOCUS", "SILENT_DND", "MEDITATION", "BEDTIME"
-    val isDaily: Boolean = false
+    val isDaily: Boolean = false,
+    val durationMinutes: Int = 0
 ) {
     val formattedTime: String
         get() = "%02d:%02d".format(timeHour, timeMinute)
+
+    val endHour: Int
+        get() = (timeHour + (timeMinute + durationMinutes) / 60) % 24
+
+    val endMinute: Int
+        get() = (timeMinute + durationMinutes) % 60
+
+    val formattedEndTime: String
+        get() = "%02d:%02d".format(endHour, endMinute)
+
+    val formattedDuration: String
+        get() {
+            val h = durationMinutes / 60
+            val m = durationMinutes % 60
+            return when {
+                h > 0 && m > 0 -> "${h}h ${m}m"
+                h > 0 -> "${h}h"
+                else -> "${m}m"
+            }
+        }
+
+    val formattedTimeRange: String
+        get() = if (durationMinutes > 0) "$formattedTime - $formattedEndTime ($formattedDuration)" else "$formattedTime • Direct Alarm"
 
     val modeBadgeText: String?
         get() = when (taskMode) {

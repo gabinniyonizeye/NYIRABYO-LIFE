@@ -63,6 +63,14 @@ class HomeActivity : AppCompatActivity() {
         dbHelper = NyirabyoDbHelper.getInstance(this)
         prefs = PreferencesManager.getInstance(this)
 
+        // One-time fresh reset for user to define custom schedule from scratch
+        if (!prefs.hasPerformedOneTimeTaskWipe()) {
+            com.example.nyirabyolife.util.TaskAlarmScheduler.cancelAllAlarms(this)
+            dbHelper.resetAllTasks()
+            prefs.setOneTimeTaskWipePerformed(true)
+            prefs.setTasksCustomizedByUser(true)
+        }
+
         recoveryAuthManager = RecoveryAuthManager(
             activity = this,
             onSuccess = {
@@ -424,9 +432,9 @@ class HomeActivity : AppCompatActivity() {
             }
 
             val rawTime = if (matchingWeekly != null) {
-                "${matchingWeekly.formattedTime}${if (matchingWeekly.isAlarmEnabled) " ⏰" else ""}"
+                "${matchingWeekly.formattedTimeRange}${if (matchingWeekly.isAlarmEnabled) " ⏰" else ""}"
             } else if (mission.timeHour > 0 || mission.timeMinute > 0 || mission.title.contains("7:00")) {
-                mission.formattedTime
+                mission.formattedTimeRange
             } else null
 
             val displayTime = if (rawTime != null) {
@@ -483,6 +491,34 @@ class HomeActivity : AppCompatActivity() {
             rowView.addView(ivCheck)
             rowView.addView(detailsLayout)
 
+            val effectiveDur = matchingWeekly?.durationMinutes ?: mission.durationMinutes
+            val isFocusable = (((mission.taskMode in listOf("STUDY_FOCUS", "SILENT_DND", "MEDITATION", "BEDTIME")) ||
+                    (matchingWeekly?.taskMode in listOf("STUDY_FOCUS", "SILENT_DND", "MEDITATION", "BEDTIME")))) && effectiveDur > 0
+
+            if (isFocusable && !mission.isCompleted) {
+                val ivPlay = ImageView(this).apply {
+                    val playSize = (24 * density).toInt()
+                    layoutParams = LinearLayout.LayoutParams(playSize, playSize).apply {
+                        marginStart = (8 * density).toInt()
+                    }
+                    setImageResource(R.drawable.ic_play)
+                    setColorFilter(themeColors.primaryAccent)
+                    setOnClickListener {
+                        val task = matchingWeekly
+                        val intent = Intent(this@HomeActivity, com.example.nyirabyolife.ui.focus.ScheduledFocusActivity::class.java).apply {
+                            putExtra(com.example.nyirabyolife.ui.focus.ScheduledFocusActivity.EXTRA_TASK_ID, task?.id ?: mission.id)
+                            putExtra(com.example.nyirabyolife.ui.focus.ScheduledFocusActivity.EXTRA_TASK_TITLE, task?.title ?: mission.title)
+                            putExtra(com.example.nyirabyolife.ui.focus.ScheduledFocusActivity.EXTRA_TASK_MODE, task?.taskMode ?: mission.taskMode)
+                            putExtra(com.example.nyirabyolife.ui.focus.ScheduledFocusActivity.EXTRA_TASK_DURATION_MINUTES, task?.durationMinutes ?: mission.durationMinutes)
+                            putExtra(com.example.nyirabyolife.ui.focus.ScheduledFocusActivity.EXTRA_START_HOUR, task?.timeHour ?: mission.timeHour)
+                            putExtra(com.example.nyirabyolife.ui.focus.ScheduledFocusActivity.EXTRA_START_MINUTE, task?.timeMinute ?: mission.timeMinute)
+                        }
+                        startActivity(intent)
+                    }
+                }
+                rowView.addView(ivPlay)
+            }
+
             rowView.setOnClickListener {
                 val newStatus = !mission.isCompleted
                 dbHelper.updateMissionStatus(mission.id, newStatus)
@@ -495,6 +531,11 @@ class HomeActivity : AppCompatActivity() {
                 }
                 loadMissions()
                 loadWeeklyPlans()
+            }
+
+            rowView.setOnLongClickListener {
+                startActivity(Intent(this, com.example.nyirabyolife.ui.weekly.WeeklyPlanActivity::class.java))
+                true
             }
 
             b.layoutMissionsContainer.addView(rowView)

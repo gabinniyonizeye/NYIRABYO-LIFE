@@ -134,6 +134,16 @@
             android:launchMode="singleTask"
             android:theme="@style/Theme.NYIRABYOLife.Launcher" />
 
+        <!-- Scheduled Focus & Countdown Screen with DND/Silence -->
+        <activity
+            android:name=".ui.focus.ScheduledFocusActivity"
+            android:exported="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:showForAllUsers="true"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.NYIRABYOLife.Launcher" />
+
         <!-- Task Alarm Receiver -->
         <receiver
             android:name=".receiver.TaskAlarmReceiver"

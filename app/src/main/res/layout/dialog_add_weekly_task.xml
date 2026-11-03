@@ -160,6 +160,75 @@
             android:textSize="11sp" />
     </LinearLayout>
 
+    <!-- Activity Duration & Auto Return Window -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="DURATION (AUTOMATIC NORMAL MODE RETURN)"
+        android:textColor="@color/gold_primary"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.12"
+        android:layout_marginTop="14dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="6dp">
+
+        <Spinner
+            android:id="@+id/spinnerDuration"
+            android:layout_width="0dp"
+            android:layout_height="46dp"
+            android:layout_weight="1"
+            android:background="@drawable/card_background_elevated"
+            android:paddingHorizontal="12dp" />
+
+        <EditText
+            android:id="@+id/etCustomDuration"
+            android:layout_width="80dp"
+            android:layout_height="46dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/card_background_elevated"
+            android:hint="Mins"
+            android:inputType="number"
+            android:gravity="center"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_tertiary"
+            android:textSize="14sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Calculated Schedule Window & Mode Preview -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="10dp"
+        android:padding="10dp"
+        android:background="@drawable/card_background_elevated">
+
+        <TextView
+            android:id="@+id/tvCalculatedWindow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⏰ Schedule: 09:00 - 12:00 (3h)"
+            android:textColor="@color/gold_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvDurationExplanation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Do Not Disturb &amp; Focus will engage directly at start and automatically return to normal mode when over."
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp" />
+    </LinearLayout>
+
     <!-- Loud Alarm Ringtone Switch -->
     <LinearLayout
         android:layout_width="match_parent"

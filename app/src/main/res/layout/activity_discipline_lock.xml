@@ -123,17 +123,20 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- Today's 3 Missions Priorities -->
+    <!-- Today's Scheduled Tasks / Priorities (Dynamic & Scrollable) -->
     <LinearLayout
         android:id="@+id/cardLockMissions"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
         android:background="@drawable/card_background_elevated"
         android:orientation="vertical"
         android:paddingHorizontal="16dp"
         android:paddingVertical="12dp"
+        android:layout_marginTop="8dp"
         android:layout_marginBottom="12dp"
-        app:layout_constraintBottom_toTopOf="@id/layoutLockActions">
+        app:layout_constraintTop_toBottomOf="@id/cardLockVerse"
+        app:layout_constraintBottom_toTopOf="@id/layoutLockActions"
+        app:layout_constrainedHeight="true">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -143,10 +146,11 @@
             android:layout_marginBottom="6dp">
 
             <TextView
+                android:id="@+id/tvLockScheduleHeader"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="TODAY'S MISSION"
+                android:text="TODAY'S SCHEDULE"
                 android:textColor="@color/text_tertiary"
                 android:textSize="10sp"
                 android:textStyle="bold"
@@ -156,89 +160,40 @@
                 android:id="@+id/tvLockMissionSummary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="0 of 3 complete"
+                android:text="0 of 0 complete"
                 android:textColor="@color/emerald_accent"
                 android:textSize="12sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Mission 1 -->
-        <LinearLayout
-            android:id="@+id/rowLockMission1"
+        <ScrollView
+            android:id="@+id/scrollLockMissions"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingVertical="5dp">
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:overScrollMode="never"
+            android:scrollbars="none"
+            android:fillViewport="true">
 
-            <ImageView
-                android:id="@+id/ivLockCheck1"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_circle_outline"
-                app:tint="@color/text_tertiary" />
-
-            <TextView
-                android:id="@+id/tvLockMissionTitle1"
+            <LinearLayout
+                android:id="@+id/layoutLockMissionsContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="Wake Up at 7:00"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp" />
-        </LinearLayout>
+                android:orientation="vertical">
 
-        <!-- Mission 2 -->
-        <LinearLayout
-            android:id="@+id/rowLockMission2"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingVertical="5dp">
+                <TextView
+                    android:id="@+id/tvLockEmptySchedule"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="No tasks scheduled for today."
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="12sp"
+                    android:gravity="center"
+                    android:paddingVertical="16dp"
+                    android:visibility="gone" />
 
-            <ImageView
-                android:id="@+id/ivLockCheck2"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_circle_outline"
-                app:tint="@color/text_tertiary" />
-
-            <TextView
-                android:id="@+id/tvLockMissionTitle2"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="Pray &amp; Scripture at 7:10"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp" />
-        </LinearLayout>
-
-        <!-- Mission 3 -->
-        <LinearLayout
-            android:id="@+id/rowLockMission3"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingVertical="5dp">
-
-            <ImageView
-                android:id="@+id/ivLockCheck3"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_circle_outline"
-                app:tint="@color/text_tertiary" />
-
-            <TextView
-                android:id="@+id/tvLockMissionTitle3"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="BedTime 22:00"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp" />
-        </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
     </LinearLayout>
 
     <!-- Bottom Actions Container -->

@@ -14,6 +14,8 @@ object TaskAlarmScheduler {
     const val EXTRA_TASK_ID = "extra_task_id"
     const val EXTRA_TASK_TITLE = "extra_task_title"
     const val EXTRA_TASK_TIME = "extra_task_time"
+    const val EXTRA_TASK_MODE = "extra_task_mode"
+    const val EXTRA_TASK_DURATION_MINUTES = "extra_task_duration_minutes"
 
     fun scheduleTaskAlarm(context: Context, task: WeeklyPlanTask) {
         if (!task.isAlarmEnabled || task.isCompleted) {
@@ -29,6 +31,8 @@ object TaskAlarmScheduler {
             putExtra(EXTRA_TASK_ID, task.id)
             putExtra(EXTRA_TASK_TITLE, task.title)
             putExtra(EXTRA_TASK_TIME, task.formattedTime)
+            putExtra(EXTRA_TASK_MODE, task.taskMode)
+            putExtra(EXTRA_TASK_DURATION_MINUTES, task.durationMinutes)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(
@@ -74,7 +78,16 @@ object TaskAlarmScheduler {
         alarmManager.cancel(pendingIntent)
     }
 
-    fun scheduleSnooze(context: Context, taskId: Long, title: String, timeFormatted: String, snoozeMinutes: Int = 10) {
+    fun cancelAllAlarms(context: Context) {
+        val db = NyirabyoDbHelper.getInstance(context)
+        val cal = Calendar.getInstance()
+        val week = cal.get(Calendar.WEEK_OF_YEAR)
+        val year = cal.get(Calendar.YEAR)
+        val tasks = db.getWeeklyTasksForWeek(week, year)
+        tasks.forEach { cancelTaskAlarm(context, it.id) }
+    }
+
+    fun scheduleSnooze(context: Context, taskId: Long, title: String, timeFormatted: String, snoozeMinutes: Int = 10, taskMode: String = "NORMAL", durationMinutes: Int = 60) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
         val triggerTime = System.currentTimeMillis() + (snoozeMinutes * 60 * 1000L)
 
@@ -83,6 +96,8 @@ object TaskAlarmScheduler {
             putExtra(EXTRA_TASK_ID, taskId)
             putExtra(EXTRA_TASK_TITLE, "$title (Snooze)")
             putExtra(EXTRA_TASK_TIME, timeFormatted)
+            putExtra(EXTRA_TASK_MODE, taskMode)
+            putExtra(EXTRA_TASK_DURATION_MINUTES, durationMinutes)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(

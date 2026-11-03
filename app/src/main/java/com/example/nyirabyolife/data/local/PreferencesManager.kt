@@ -44,6 +44,8 @@ class PreferencesManager(context: Context) {
         private const val KEY_ACTIVE_THEME = "key_active_theme"
         private const val KEY_LAST_REMINDER_TIME = "key_last_reminder_time"
         private const val KEY_LAST_WINDDOWN_DATE = "key_last_winddown_date"
+        private const val KEY_TASKS_CUSTOMIZED_BY_USER = "key_tasks_customized_by_user"
+        private const val KEY_ONE_TIME_TASK_WIPE_PERFORMED = "key_one_time_task_wipe_v1"
 
         const val THEME_HOLY_GOLD = "GOLD_OBSIDIAN"
         const val THEME_CELESTIAL_BLUE = "CELESTIAL_BLUE"
@@ -548,6 +550,23 @@ class PreferencesManager(context: Context) {
 
     fun setLastWindDownDate(date: String) {
         prefs.edit().putString(KEY_LAST_WINDDOWN_DATE, date).apply()
+    }
+
+    // --- TASK CUSTOMIZATION & FRESH RESET TRACKING ---
+    fun isTasksCustomizedByUser(): Boolean {
+        return prefs.getBoolean(KEY_TASKS_CUSTOMIZED_BY_USER, false)
+    }
+
+    fun setTasksCustomizedByUser(customized: Boolean) {
+        prefs.edit().putBoolean(KEY_TASKS_CUSTOMIZED_BY_USER, customized).apply()
+    }
+
+    fun hasPerformedOneTimeTaskWipe(): Boolean {
+        return prefs.getBoolean(KEY_ONE_TIME_TASK_WIPE_PERFORMED, false)
+    }
+
+    fun setOneTimeTaskWipePerformed(performed: Boolean) {
+        prefs.edit().putBoolean(KEY_ONE_TIME_TASK_WIPE_PERFORMED, performed).apply()
     }
 
     fun clearAllPreferences() {

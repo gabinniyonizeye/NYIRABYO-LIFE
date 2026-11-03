@@ -80,6 +80,7 @@ class BlockShieldActivity : AppCompatActivity() {
 
     private fun applyThemeColors() {
         val theme = ThemeHelper.getActiveThemeColors(this)
+        binding.root.setBackgroundColor(theme.background)
         binding.ivShieldIcon.setColorFilter(theme.primaryAccent)
         binding.tvShieldHeader.setTextColor(theme.primaryAccent)
 

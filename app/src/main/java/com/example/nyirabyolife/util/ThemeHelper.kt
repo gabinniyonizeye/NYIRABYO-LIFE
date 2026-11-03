@@ -40,8 +40,11 @@ object ThemeHelper {
         val scriptureItalic: Boolean,
         val scriptureActionText: String,
         val missionsSubtitle: String,
-        val missionRowStyle: MissionRowStyle
-    )
+        val missionRowStyle: MissionRowStyle,
+        val backgroundColor: Int = Color.parseColor("#0B0D11")
+    ) {
+        val background: Int get() = backgroundColor
+    }
 
     fun getActiveThemeColors(context: Context): ThemeColors {
         val theme = PreferencesManager.getInstance(context).getActiveTheme()
@@ -64,7 +67,8 @@ object ThemeHelper {
                 scriptureItalic = false,
                 scriptureActionText = "Enter Sanctuary 🕊️ →",
                 missionsSubtitle = "SANCTUARY PROTOCOLS • ACTIVE HABITS ⚡",
-                missionRowStyle = MissionRowStyle.FLOATING_CAPSULE
+                missionRowStyle = MissionRowStyle.FLOATING_CAPSULE,
+                backgroundColor = Color.parseColor("#080E1A")
             )
             PreferencesManager.THEME_LIVING_VINE -> ThemeColors(
                 name = "Living Vine",
@@ -84,7 +88,8 @@ object ThemeHelper {
                 scriptureItalic = false,
                 scriptureActionText = "Nourish the Soul 🌿 →",
                 missionsSubtitle = "DAILY BRANCH DISCIPLINE • LIFE IN CHRIST 🌿",
-                missionRowStyle = MissionRowStyle.ORGANIC_BRANCH
+                missionRowStyle = MissionRowStyle.ORGANIC_BRANCH,
+                backgroundColor = Color.parseColor("#07150F")
             )
             PreferencesManager.THEME_ROYAL_AMETHYST -> ThemeColors(
                 name = "Royal Solitude",
@@ -104,7 +109,8 @@ object ThemeHelper {
                 scriptureItalic = true,
                 scriptureActionText = "Silent Contemplation →",
                 missionsSubtitle = "SOLITARY FOCUS • THE ESSENTIAL FEW 🕊️",
-                missionRowStyle = MissionRowStyle.MONASTIC_MINIMAL
+                missionRowStyle = MissionRowStyle.MONASTIC_MINIMAL,
+                backgroundColor = Color.parseColor("#0F0A1C")
             )
             else -> ThemeColors(
                 name = "Holy Obsidian Gold",
@@ -124,7 +130,8 @@ object ThemeHelper {
                 scriptureItalic = false,
                 scriptureActionText = "Bible Study & Presence →",
                 missionsSubtitle = "SYNCED WITH WEEKLY PLAN • HABIT REWIRING ⏰",
-                missionRowStyle = MissionRowStyle.CLASSIC_CHECKBOX
+                missionRowStyle = MissionRowStyle.CLASSIC_CHECKBOX,
+                backgroundColor = Color.parseColor("#0B0D11")
             )
         }
     }

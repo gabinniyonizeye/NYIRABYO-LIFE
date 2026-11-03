@@ -74,6 +74,18 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
+        <!-- Direct Launch Focus / Study Button -->
+        <ImageButton
+            android:id="@+id/btnStartFocus"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/pill_background"
+            android:src="@drawable/ic_play"
+            app:tint="@color/gold_primary"
+            android:contentDescription="Start Focus Session"
+            android:visibility="gone" />
+
         <!-- Alarm Icon Button -->
         <ImageButton
             android:id="@+id/btnToggleAlarm"

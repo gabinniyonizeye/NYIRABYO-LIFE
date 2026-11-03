@@ -149,6 +149,20 @@
         android:layout_marginBottom="24dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
+        <!-- Start Scheduled Focus Session & DND Now -->
+        <Button
+            android:id="@+id/btnStartFocusNow"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginBottom="10dp"
+            android:background="@drawable/button_gold"
+            android:text="🎯 Start Focus Session &amp; DND"
+            android:textColor="@color/bg_dark"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.05"
+            android:visibility="gone" />
+
         <!-- Complete / I'm on it (Primary Button) -->
         <Button
             android:id="@+id/btnCompleteTask"

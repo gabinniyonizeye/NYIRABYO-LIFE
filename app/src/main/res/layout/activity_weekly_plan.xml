@@ -50,11 +50,20 @@
         </LinearLayout>
 
         <Button
+            android:id="@+id/btnResetTasks"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Reset 🗑️"
+            android:textColor="@color/rose_alert"
+            android:textSize="11sp" />
+
+        <Button
             android:id="@+id/btnTestAlarm"
             style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Test Ringtone 🔊"
+            android:text="Test 🔊"
             android:textColor="@color/gold_primary"
             android:textSize="11sp" />
     </LinearLayout>

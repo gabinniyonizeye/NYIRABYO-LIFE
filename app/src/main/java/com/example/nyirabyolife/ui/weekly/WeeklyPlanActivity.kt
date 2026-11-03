@@ -1,5 +1,6 @@
 package com.example.nyirabyolife.ui.weekly
 
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Paint
 import android.media.AudioAttributes
@@ -10,6 +11,8 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -24,6 +27,7 @@ import com.example.nyirabyolife.data.model.WeeklyPlanTask
 import com.example.nyirabyolife.databinding.ActivityWeeklyPlanBinding
 import com.example.nyirabyolife.databinding.DialogAddWeeklyTaskBinding
 import com.example.nyirabyolife.databinding.ItemWeeklyPlanTaskBinding
+import com.example.nyirabyolife.ui.focus.ScheduledFocusActivity
 import com.example.nyirabyolife.util.TaskAlarmScheduler
 import com.example.nyirabyolife.util.ThemeHelper
 import java.util.Calendar
@@ -62,14 +66,31 @@ class WeeklyPlanActivity : AppCompatActivity() {
         currentYear = cal.get(Calendar.YEAR)
         selectedDayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
 
-        // Ensure starter plan exists if empty
-        dbHelper.ensureDefaultSundayWeeklyPlanIfEmpty(currentWeekOfYear, currentYear)
+        if (!com.example.nyirabyolife.data.local.PreferencesManager.getInstance(this).isTasksCustomizedByUser()) {
+            dbHelper.ensureDefaultSundayWeeklyPlanIfEmpty(currentWeekOfYear, currentYear)
+        }
 
         binding.btnBack.setOnClickListener { finish() }
 
         binding.btnTestAlarm.setOnClickListener { testAlarmSound() }
 
-        binding.btnAddNewTask.setOnClickListener { promptAddTask() }
+        binding.btnResetTasks.setOnClickListener {
+            AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
+                .setTitle("Reset All Scheduled Tasks?")
+                .setMessage("This will remove all scheduled tasks and alarms so you can set your own fresh schedule from scratch.\n\nAre you sure you want to reset everything?")
+                .setPositiveButton("Reset Everything") { _, _ ->
+                    TaskAlarmScheduler.cancelAllAlarms(this)
+                    dbHelper.resetAllTasks()
+                    loadTasksForSelectedDay()
+                    renderDayTabs()
+                    Toast.makeText(this, "All tasks cleared! Set everything on your own.", Toast.LENGTH_LONG).show()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+
+        binding.btnAddNewTask.setOnClickListener { showTaskDialog(null) }
+        binding.layoutEmptyTasks.setOnClickListener { showTaskDialog(null) }
 
         applyThemeColors()
         setupSundayBanner()
@@ -80,6 +101,7 @@ class WeeklyPlanActivity : AppCompatActivity() {
     private fun applyThemeColors() {
         val theme = ThemeHelper.getActiveThemeColors(this)
         binding.btnBack.background = ThemeHelper.createPillDrawable(this, theme)
+        binding.btnResetTasks.background = ThemeHelper.createPillDrawable(this, theme)
         binding.btnTestAlarm.background = ThemeHelper.createPillDrawable(this, theme)
         binding.btnTestAlarm.setTextColor(theme.secondaryAccent)
 
@@ -177,7 +199,7 @@ class WeeklyPlanActivity : AppCompatActivity() {
             val itemBinding = ItemWeeklyPlanTaskBinding.inflate(inflater, binding.layoutTasksContainer, false)
             itemBinding.root.background = ThemeHelper.createCardDrawable(this, theme, isElevated = false)
             itemBinding.tvTaskTitle.text = task.title
-            itemBinding.tvTaskTime.text = task.formattedTime
+            itemBinding.tvTaskTime.text = task.formattedTimeRange
             itemBinding.tvTaskTime.setTextColor(theme.primaryAccent)
 
             // Mode & Recurrence Badge
@@ -202,6 +224,33 @@ class WeeklyPlanActivity : AppCompatActivity() {
                 itemBinding.ivTaskCheck.setColorFilter(ContextCompat.getColor(this, R.color.text_tertiary))
                 itemBinding.tvTaskTitle.paintFlags = itemBinding.tvTaskTitle.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
                 itemBinding.tvTaskTitle.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
+            }
+
+            val isFocusable = (task.taskMode in listOf("STUDY_FOCUS", "SILENT_DND", "MEDITATION", "BEDTIME")) && task.durationMinutes > 0
+            if (isFocusable && !task.isCompleted) {
+                itemBinding.btnStartFocus.visibility = android.view.View.VISIBLE
+                itemBinding.btnStartFocus.setColorFilter(theme.primaryAccent)
+                itemBinding.btnStartFocus.setOnClickListener {
+                    val focusIntent = Intent(this, ScheduledFocusActivity::class.java).apply {
+                        putExtra(ScheduledFocusActivity.EXTRA_TASK_ID, task.id)
+                        putExtra(ScheduledFocusActivity.EXTRA_TASK_TITLE, task.title)
+                        putExtra(ScheduledFocusActivity.EXTRA_TASK_MODE, task.taskMode)
+                        putExtra(ScheduledFocusActivity.EXTRA_TASK_DURATION_MINUTES, task.durationMinutes)
+                        putExtra(ScheduledFocusActivity.EXTRA_START_HOUR, task.timeHour)
+                        putExtra(ScheduledFocusActivity.EXTRA_START_MINUTE, task.timeMinute)
+                    }
+                    startActivity(focusIntent)
+                }
+            } else {
+                itemBinding.btnStartFocus.visibility = android.view.View.GONE
+            }
+
+            // Tapping task card or details opens the edit dialog
+            itemBinding.layoutTaskDetails.setOnClickListener {
+                showTaskDialog(task)
+            }
+            itemBinding.root.setOnClickListener {
+                showTaskDialog(task)
             }
 
             itemBinding.ivTaskCheck.setOnClickListener {
@@ -250,7 +299,7 @@ class WeeklyPlanActivity : AppCompatActivity() {
         }
     }
 
-    private fun promptAddTask() {
+    private fun showTaskDialog(taskToEdit: WeeklyPlanTask? = null) {
         val dialogBinding = DialogAddWeeklyTaskBinding.inflate(layoutInflater)
 
         // 1. Recurrence Spinner: Single Day vs Daily
@@ -270,8 +319,9 @@ class WeeklyPlanActivity : AppCompatActivity() {
         val spinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, daysList)
         dialogBinding.spinnerDayOfWeek.adapter = spinnerAdapter
 
-        // Pre-select current day tab
-        val preIndex = when (selectedDayOfWeek) {
+        // Pre-select target day
+        val targetDay = taskToEdit?.dayOfWeek ?: selectedDayOfWeek
+        val preIndex = when (targetDay) {
             Calendar.SUNDAY -> 0
             Calendar.MONDAY -> 1
             Calendar.TUESDAY -> 2
@@ -295,11 +345,102 @@ class WeeklyPlanActivity : AppCompatActivity() {
         val modeAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, modeLabels)
         dialogBinding.spinnerTaskMode.adapter = modeAdapter
 
-        // Default to next hour
-        val now = Calendar.getInstance()
-        val defaultHour = (now.get(Calendar.HOUR_OF_DAY) + 1) % 24
-        dialogBinding.etHour.setText("%02d".format(defaultHour))
-        dialogBinding.etMinute.setText("00")
+        if (taskToEdit != null) {
+            val mIdx = modeKeys.indexOf(taskToEdit.taskMode)
+            if (mIdx >= 0) dialogBinding.spinnerTaskMode.setSelection(mIdx)
+        }
+
+        // 4. Duration Selector & Auto-Return Window Setup
+        val durationLabels = listOf(
+            "⚡ Direct Alarm (At that moment - No duration)",
+            "30 minutes",
+            "45 minutes",
+            "1 hour (60 min)",
+            "1.5 hours (90 min)",
+            "2 hours (120 min)",
+            "3 hours (180 min)",
+            "4 hours (240 min)",
+            "Custom minutes..."
+        )
+        val durationValues = listOf(0, 30, 45, 60, 90, 120, 180, 240, -1)
+        val durationAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, durationLabels)
+        dialogBinding.spinnerDuration.adapter = durationAdapter
+
+        fun updateCalculatedPreview() {
+            val h = dialogBinding.etHour.text.toString().toIntOrNull() ?: 9
+            val m = dialogBinding.etMinute.text.toString().toIntOrNull() ?: 0
+            val safeH = h.coerceIn(0, 23)
+            val safeM = m.coerceIn(0, 59)
+
+            val pos = dialogBinding.spinnerDuration.selectedItemPosition
+            val dur = if (pos == durationValues.lastIndex) {
+                dialogBinding.etCustomDuration.text.toString().toIntOrNull() ?: 60
+            } else {
+                durationValues.getOrElse(pos) { 0 }
+            }.coerceAtLeast(0).coerceAtMost(720)
+
+            if (dur <= 0) {
+                dialogBinding.tvCalculatedWindow.text = "⏰ Direct Alarm at %02d:%02d".format(safeH, safeM)
+                dialogBinding.tvDurationExplanation.text = "Loud alarm will sound at %02d:%02d without entering an extended focus session.".format(safeH, safeM)
+            } else {
+                val endTotal = safeH * 60 + safeM + dur
+                val endH = (endTotal / 60) % 24
+                val endM = endTotal % 60
+                val durH = dur / 60
+                val durRemM = dur % 60
+                val durStr = if (durH > 0 && durRemM > 0) "${durH}h ${durRemM}m" else if (durH > 0) "${durH}h" else "${durRemM}m"
+
+                dialogBinding.tvCalculatedWindow.text = "⏰ Schedule: %02d:%02d - %02d:%02d (%s)".format(safeH, safeM, endH, endM, durStr)
+                dialogBinding.tvDurationExplanation.text = "Do Not Disturb & Focus will engage at %02d:%02d and automatically restore normal mode at %02d:%02d.".format(safeH, safeM, endH, endM)
+            }
+        }
+
+        dialogBinding.spinnerDuration.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                val isCustom = (position == durationValues.lastIndex)
+                dialogBinding.etCustomDuration.visibility = if (isCustom) android.view.View.VISIBLE else android.view.View.GONE
+                updateCalculatedPreview()
+            }
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+        }
+
+        val textWatcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                updateCalculatedPreview()
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        }
+        dialogBinding.etHour.addTextChangedListener(textWatcher)
+        dialogBinding.etMinute.addTextChangedListener(textWatcher)
+        dialogBinding.etCustomDuration.addTextChangedListener(textWatcher)
+
+        // Pre-populate fields if editing or new
+        if (taskToEdit != null) {
+            dialogBinding.etTaskTitle.setText(taskToEdit.title)
+            dialogBinding.spinnerRecurrence.setSelection(if (taskToEdit.isDaily) 1 else 0)
+            dialogBinding.etHour.setText("%02d".format(taskToEdit.timeHour))
+            dialogBinding.etMinute.setText("%02d".format(taskToEdit.timeMinute))
+            dialogBinding.switchAlarm.isChecked = taskToEdit.isAlarmEnabled
+
+            val dur = taskToEdit.durationMinutes
+            val matchedIndex = durationValues.indexOf(dur)
+            if (matchedIndex >= 0 && matchedIndex != durationValues.lastIndex) {
+                dialogBinding.spinnerDuration.setSelection(matchedIndex)
+            } else {
+                dialogBinding.spinnerDuration.setSelection(durationValues.lastIndex)
+                dialogBinding.etCustomDuration.setText(dur.toString())
+                dialogBinding.etCustomDuration.visibility = android.view.View.VISIBLE
+            }
+        } else {
+            // Default to next hour and Direct Alarm (0 min)
+            val now = Calendar.getInstance()
+            val defaultHour = (now.get(Calendar.HOUR_OF_DAY) + 1) % 24
+            dialogBinding.etHour.setText("%02d".format(defaultHour))
+            dialogBinding.etMinute.setText("00")
+            dialogBinding.spinnerDuration.setSelection(0)
+        }
+        updateCalculatedPreview()
 
         dialogBinding.tvQuickPresets.setOnClickListener {
             // Cycle through foundation presets: 07:00, 07:10, 22:00
@@ -309,23 +450,30 @@ class WeeklyPlanActivity : AppCompatActivity() {
                 dialogBinding.etMinute.setText("10")
                 dialogBinding.etTaskTitle.setText("Pray & Scripture at 7:10")
                 dialogBinding.spinnerTaskMode.setSelection(3) // Meditation
+                dialogBinding.spinnerDuration.setSelection(1) // 30 min
             } else if (curHour == "07" && dialogBinding.etMinute.text.toString() == "10") {
                 dialogBinding.etHour.setText("22")
                 dialogBinding.etMinute.setText("00")
                 dialogBinding.etTaskTitle.setText("BedTime 22:00")
                 dialogBinding.spinnerTaskMode.setSelection(4) // BedTime
+                dialogBinding.spinnerDuration.setSelection(0) // Direct Alarm
             } else {
                 dialogBinding.etHour.setText("07")
                 dialogBinding.etMinute.setText("00")
                 dialogBinding.etTaskTitle.setText("Wake Up at 7:00")
                 dialogBinding.spinnerTaskMode.setSelection(0)
+                dialogBinding.spinnerDuration.setSelection(0) // Direct Alarm
             }
+            updateCalculatedPreview()
         }
 
-        AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
-            .setTitle("Schedule Task & Prime Alarm")
+        val dialogTitle = if (taskToEdit != null) "Edit Task / Alarm" else "Schedule Task & Prime Alarm"
+        val positiveBtnText = if (taskToEdit != null) "Save Changes" else "Schedule & Set Alarm"
+
+        val builder = AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
+            .setTitle(dialogTitle)
             .setView(dialogBinding.root)
-            .setPositiveButton("Schedule & Set Alarm") { _, _ ->
+            .setPositiveButton(positiveBtnText) { _, _ ->
                 val title = dialogBinding.etTaskTitle.text.toString().trim()
                 if (title.isEmpty()) {
                     Toast.makeText(this, "Please enter a task title", Toast.LENGTH_SHORT).show()
@@ -336,6 +484,13 @@ class WeeklyPlanActivity : AppCompatActivity() {
                 val minute = dialogBinding.etMinute.text.toString().toIntOrNull() ?: 0
                 val safeHour = hour.coerceIn(0, 23)
                 val safeMinute = minute.coerceIn(0, 59)
+
+                val durPosition = dialogBinding.spinnerDuration.selectedItemPosition
+                val selectedDuration = if (durPosition == durationValues.lastIndex) {
+                    dialogBinding.etCustomDuration.text.toString().toIntOrNull() ?: 60
+                } else {
+                    durationValues.getOrElse(durPosition) { 0 }
+                }.coerceAtLeast(0).coerceAtMost(720)
 
                 val isDaily = (dialogBinding.spinnerRecurrence.selectedItemPosition == 1)
                 val selectedDayIndex = dialogBinding.spinnerDayOfWeek.selectedItemPosition
@@ -353,43 +508,74 @@ class WeeklyPlanActivity : AppCompatActivity() {
                 val selectedMode = modeKeys.getOrElse(dialogBinding.spinnerTaskMode.selectedItemPosition) { "NORMAL" }
                 val isAlarm = dialogBinding.switchAlarm.isChecked
 
-                val newTask = WeeklyPlanTask(
-                    title = title,
-                    dayOfWeek = dayOfWeekCode,
-                    timeHour = safeHour,
-                    timeMinute = safeMinute,
-                    isAlarmEnabled = isAlarm,
-                    isCompleted = false,
-                    weekOfYear = currentWeekOfYear,
-                    year = currentYear,
-                    taskMode = selectedMode,
-                    isDaily = isDaily
-                )
-
-                if (isDaily) {
-                    val ids = dbHelper.addDailyRecurringTask(newTask)
-                    if (isAlarm) {
-                        TaskAlarmScheduler.scheduleTaskAlarm(this, newTask.copy(id = ids.firstOrNull() ?: 0L))
-                        Toast.makeText(this, "Daily foundation primed for all 7 days! ⏰ %02d:%02d".format(safeHour, safeMinute), Toast.LENGTH_LONG).show()
-                    } else {
-                        Toast.makeText(this, "Daily task added across all 7 days", Toast.LENGTH_SHORT).show()
+                if (taskToEdit != null) {
+                    val updatedTask = taskToEdit.copy(
+                        title = title,
+                        dayOfWeek = dayOfWeekCode,
+                        timeHour = safeHour,
+                        timeMinute = safeMinute,
+                        isAlarmEnabled = isAlarm,
+                        taskMode = selectedMode,
+                        isDaily = isDaily,
+                        durationMinutes = selectedDuration
+                    )
+                    dbHelper.updateWeeklyTask(updatedTask)
+                    TaskAlarmScheduler.cancelTaskAlarm(this, taskToEdit.id)
+                    if (isAlarm && !taskToEdit.isCompleted) {
+                        TaskAlarmScheduler.scheduleTaskAlarm(this, updatedTask)
                     }
-                } else {
-                    val newId = dbHelper.addWeeklyTask(newTask)
-                    if (isAlarm) {
-                        TaskAlarmScheduler.scheduleTaskAlarm(this, newTask.copy(id = newId))
-                        Toast.makeText(this, "Task scheduled! ⏰ Loud Alarm primed for %02d:%02d".format(safeHour, safeMinute), Toast.LENGTH_LONG).show()
-                    } else {
-                        Toast.makeText(this, "Task scheduled without alarm", Toast.LENGTH_SHORT).show()
-                    }
+                    Toast.makeText(this, "Task updated! ⏰", Toast.LENGTH_SHORT).show()
                     selectedDayOfWeek = dayOfWeekCode
+                } else {
+                    val newTask = WeeklyPlanTask(
+                        title = title,
+                        dayOfWeek = dayOfWeekCode,
+                        timeHour = safeHour,
+                        timeMinute = safeMinute,
+                        isAlarmEnabled = isAlarm,
+                        isCompleted = false,
+                        weekOfYear = currentWeekOfYear,
+                        year = currentYear,
+                        taskMode = selectedMode,
+                        isDaily = isDaily,
+                        durationMinutes = selectedDuration
+                    )
+
+                    if (isDaily) {
+                        val ids = dbHelper.addDailyRecurringTask(newTask)
+                        if (isAlarm) {
+                            TaskAlarmScheduler.scheduleTaskAlarm(this, newTask.copy(id = ids.firstOrNull() ?: 0L))
+                            Toast.makeText(this, "Daily foundation primed for all 7 days! ⏰ %02d:%02d".format(safeHour, safeMinute), Toast.LENGTH_LONG).show()
+                        } else {
+                            Toast.makeText(this, "Daily task added across all 7 days", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        val newId = dbHelper.addWeeklyTask(newTask)
+                        if (isAlarm) {
+                            TaskAlarmScheduler.scheduleTaskAlarm(this, newTask.copy(id = newId))
+                            Toast.makeText(this, "Task scheduled! ⏰ Loud Alarm primed for %02d:%02d".format(safeHour, safeMinute), Toast.LENGTH_LONG).show()
+                        } else {
+                            Toast.makeText(this, "Task scheduled without alarm", Toast.LENGTH_SHORT).show()
+                        }
+                        selectedDayOfWeek = dayOfWeekCode
+                    }
                 }
 
                 renderDayTabs()
                 loadTasksForSelectedDay()
             }
             .setNegativeButton("Cancel", null)
-            .show()
+
+        if (taskToEdit != null) {
+            builder.setNeutralButton("Delete Task") { _, _ ->
+                TaskAlarmScheduler.cancelTaskAlarm(this, taskToEdit.id)
+                dbHelper.deleteWeeklyTask(taskToEdit.id)
+                loadTasksForSelectedDay()
+                Toast.makeText(this, "Task deleted", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        builder.show()
     }
 
     private fun testAlarmSound() {

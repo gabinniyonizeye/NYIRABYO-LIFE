@@ -26,6 +26,8 @@ class TaskAlarmReceiver : BroadcastReceiver() {
         val taskId = intent.getLongExtra(TaskAlarmScheduler.EXTRA_TASK_ID, -1L)
         val taskTitle = intent.getStringExtra(TaskAlarmScheduler.EXTRA_TASK_TITLE) ?: "Scheduled Weekly Task"
         val taskTime = intent.getStringExtra(TaskAlarmScheduler.EXTRA_TASK_TIME) ?: ""
+        val taskMode = intent.getStringExtra(TaskAlarmScheduler.EXTRA_TASK_MODE) ?: "NORMAL"
+        val durationMinutes = intent.getIntExtra(TaskAlarmScheduler.EXTRA_TASK_DURATION_MINUTES, 60)
 
         // Acquire temporary wake lock to ensure screen turns on
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
@@ -43,6 +45,8 @@ class TaskAlarmReceiver : BroadcastReceiver() {
             putExtra(TaskAlarmScheduler.EXTRA_TASK_ID, taskId)
             putExtra(TaskAlarmScheduler.EXTRA_TASK_TITLE, taskTitle)
             putExtra(TaskAlarmScheduler.EXTRA_TASK_TIME, taskTime)
+            putExtra(TaskAlarmScheduler.EXTRA_TASK_MODE, taskMode)
+            putExtra(TaskAlarmScheduler.EXTRA_TASK_DURATION_MINUTES, durationMinutes)
         }
 
         val fullScreenPendingIntent = PendingIntent.getActivity(
