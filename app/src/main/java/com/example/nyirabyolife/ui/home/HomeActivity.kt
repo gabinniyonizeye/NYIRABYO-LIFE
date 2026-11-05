@@ -23,6 +23,8 @@ import com.example.nyirabyolife.data.local.NyirabyoDbHelper
 import com.example.nyirabyolife.data.local.PreferencesManager
 import com.example.nyirabyolife.data.local.ScriptureRepository
 import com.example.nyirabyolife.data.model.Mission
+import com.example.nyirabyolife.data.model.ShoppingSession
+import com.example.nyirabyolife.data.model.ShoppingSessionItem
 import com.example.nyirabyolife.data.model.TodoItem
 import com.example.nyirabyolife.databinding.ActivityHomeBinding
 import com.example.nyirabyolife.databinding.ItemHomeTodoBinding
@@ -293,10 +295,13 @@ class HomeActivity : AppCompatActivity() {
         if (td != null) {
             td.tvTodoHeaderSubtitle.setTextColor(themeColors.primaryAccent)
             td.tvTodoSummaryTitle.setTextColor(themeColors.primaryAccent)
+            td.tvMarketBudgetTitle.setTextColor(themeColors.primaryAccent)
             td.cardTodoSummary.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, themeColors, isElevated = false)
             td.cardTodoInput.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, themeColors, isElevated = true)
+            td.cardMarketBudget.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, themeColors, isElevated = true)
             td.pbTodoProgress.progressTintList = android.content.res.ColorStateList.valueOf(themeColors.primaryAccent)
             td.btnAddTodo.setColorFilter(themeColors.primaryAccent)
+            td.btnFinishMarketTrip.setTextColor(themeColors.primaryAccent)
             updateTodoFilterChips()
             updateNewTodoCategoryChips()
         }
@@ -717,6 +722,16 @@ class HomeActivity : AppCompatActivity() {
             showCurrencyPicker()
         }
 
+        // View Shopping Trip History
+        todoBinding.btnViewShoppingHistory.setOnClickListener {
+            showShoppingHistoryDialog()
+        }
+
+        // Finish & Save Shopping Trip to History
+        todoBinding.btnFinishMarketTrip.setOnClickListener {
+            promptFinishShoppingTrip()
+        }
+
         loadTodos()
     }
 
@@ -1090,6 +1105,27 @@ class HomeActivity : AppCompatActivity() {
         }
         layout.addView(divLabel)
 
+        // Previous price lookup from history
+        val previousPurchase = dbHelper.findPreviousPriceForItem(todo.title)
+        if (previousPurchase != null) {
+            val tvPrevPrice = TextView(this).apply {
+                val cur = todo.currency.ifBlank { "RWF" }
+                text = "💡 Previous price: $cur ${"%.0f".format(previousPurchase.first)} (${previousPurchase.second})\nTap to use as planned budget"
+                setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.gold_primary))
+                textSize = 10.5f
+                setPadding(pCard, (6 * density).toInt(), pCard, (6 * density).toInt())
+                setBackgroundResource(R.drawable.pill_background)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = (4 * density).toInt(); bottomMargin = (4 * density).toInt() }
+                setOnClickListener {
+                    Toast.makeText(this@HomeActivity, "Applied previous price: %.0f".format(previousPurchase.first), Toast.LENGTH_SHORT).show()
+                }
+            }
+            layout.addView(tvPrevPrice)
+        }
+
         // Budget (planned price per unit)
         val etPlanned = makeEditText(
             if (todo.plannedPrice > 0) "%.0f".format(todo.plannedPrice) else "",
@@ -1097,6 +1133,15 @@ class HomeActivity : AppCompatActivity() {
             android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
         )
         layout.addView(etPlanned)
+
+        // Connect tap on previous price to set the planned price
+        if (previousPurchase != null) {
+            val prevView = layout.getChildAt(layout.childCount - 2) as? TextView
+            prevView?.setOnClickListener {
+                etPlanned.setText("%.0f".format(previousPurchase.first))
+                Toast.makeText(this@HomeActivity, "Applied previous price: %.0f".format(previousPurchase.first), Toast.LENGTH_SHORT).show()
+            }
+        }
 
         // Actual price found / paid
         val etActual = makeEditText(
@@ -1184,6 +1229,373 @@ class HomeActivity : AppCompatActivity() {
                 Toast.makeText(this, "Item deleted.", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun promptFinishShoppingTrip() {
+        val b = slideTodoBinding ?: return
+        val marketTodos = dbHelper.getAllTodos("MARKET")
+        if (marketTodos.isEmpty()) {
+            Toast.makeText(this, "No items in your Market list to save.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val currency = b.tvMarketCurrency.text?.toString()?.takeIf { it.isNotBlank() } ?: "RWF"
+        val totalBudget = marketTodos.sumOf { it.totalPlanned }
+        val totalSpent = marketTodos.filter { it.actualPrice > 0.0 }.sumOf { it.totalActual }
+        val netSaved = marketTodos.filter { it.hasSavings }.sumOf { it.priceDifference } -
+                       marketTodos.filter { it.isOverBudget }.sumOf { -it.priceDifference }
+
+        val dateFormat = SimpleDateFormat("EEEE, MMM d, yyyy", Locale.getDefault())
+        val defaultName = "Market Trip - ${SimpleDateFormat("MMM d", Locale.getDefault()).format(Date())}"
+        val density = resources.displayMetrics.density
+
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding((18 * density).toInt(), (10 * density).toInt(), (18 * density).toInt(), (10 * density).toInt())
+        }
+
+        // Trip Name input
+        val etName = EditText(this).apply {
+            setText(defaultName)
+            hint = "Trip name (e.g. Nyabugogo Market, Supermarket)"
+            setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.text_primary))
+            setHintTextColor(ContextCompat.getColor(this@HomeActivity, R.color.text_tertiary))
+            setBackgroundResource(R.drawable.card_background)
+            setPadding((12 * density).toInt(), (10 * density).toInt(), (12 * density).toInt(), (10 * density).toInt())
+        }
+        layout.addView(etName)
+
+        // Summary Preview
+        val tvSummary = TextView(this).apply {
+            val netStr = if (netSaved > 0) "💚 Saved $currency ${"%.0f".format(netSaved)}"
+                         else if (netSaved < 0) "🔴 Over budget by $currency ${"%.0f".format(-netSaved)}"
+                         else "✓ On budget"
+            text = "• Items to record: ${marketTodos.size}\n• Total Budget: $currency ${"%.0f".format(totalBudget)}\n• Total Spent: $currency ${"%.0f".format(totalSpent)}\n• Net Result: $netStr"
+            setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.text_secondary))
+            textSize = 12f
+            setLineSpacing(4f, 1f)
+            setPadding(0, (10 * density).toInt(), 0, (10 * density).toInt())
+        }
+        layout.addView(tvSummary)
+
+        // Checkbox: Remove completed/purchased items
+        val cbClearPurchased = android.widget.CheckBox(this).apply {
+            text = "Clear purchased items from active list after saving"
+            isChecked = true
+            setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.text_secondary))
+            textSize = 12f
+        }
+        layout.addView(cbClearPurchased)
+
+        AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
+            .setTitle("📦 Finish & Save Shopping Trip")
+            .setView(layout)
+            .setPositiveButton("Save to History") { _, _ ->
+                val tripName = etName.text.toString().trim().ifBlank { defaultName }
+                val dateLabel = dateFormat.format(Date())
+
+                val jsonArr = org.json.JSONArray()
+                for (item in marketTodos) {
+                    val obj = org.json.JSONObject().apply {
+                        put("title", item.title)
+                        put("plannedPrice", item.plannedPrice)
+                        put("actualPrice", item.actualPrice)
+                        put("quantity", item.quantity)
+                        put("note", item.note)
+                    }
+                    jsonArr.put(obj)
+                }
+
+                val session = ShoppingSession(
+                    name = tripName,
+                    dateLabel = dateLabel,
+                    createdAt = System.currentTimeMillis(),
+                    totalBudget = totalBudget,
+                    totalSpent = totalSpent,
+                    netResult = netSaved,
+                    currency = currency,
+                    itemCount = marketTodos.size,
+                    itemsJson = jsonArr.toString()
+                )
+                dbHelper.saveShoppingSession(session)
+
+                if (cbClearPurchased.isChecked) {
+                    for (item in marketTodos) {
+                        if (item.isCompleted || item.actualPrice > 0.0) {
+                            dbHelper.deleteTodo(item.id)
+                        }
+                    }
+                }
+
+                loadTodos()
+                Toast.makeText(this, "Trip '$tripName' archived to history! 📜", Toast.LENGTH_LONG).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showShoppingHistoryDialog() {
+        val sessions = dbHelper.getAllShoppingSessions()
+        if (sessions.isEmpty()) {
+            AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
+                .setTitle("📜 Shopping Trip History")
+                .setMessage("No archived trips yet.\n\nWhen you finish buying items at the market, tap '📦 Finish & Save' to record your trip, prices, and savings for future reference.")
+                .setPositiveButton("OK", null)
+                .show()
+            return
+        }
+
+        val density = resources.displayMetrics.density
+        val scrollView = androidx.core.widget.NestedScrollView(this).apply {
+            isFillViewport = true
+        }
+
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding((16 * density).toInt(), (10 * density).toInt(), (16 * density).toInt(), (16 * density).toInt())
+        }
+        scrollView.addView(container)
+
+        val themeColors = com.example.nyirabyolife.util.ThemeHelper.getActiveThemeColors(this)
+        var dialog: AlertDialog? = null
+
+        fun renderSessionList() {
+            container.removeAllViews()
+            val currentList = dbHelper.getAllShoppingSessions()
+            if (currentList.isEmpty()) {
+                dialog?.dismiss()
+                Toast.makeText(this, "All history records cleared.", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            for (session in currentList) {
+                val card = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this@HomeActivity, themeColors, isElevated = true)
+                    setPadding((14 * density).toInt(), (12 * density).toInt(), (14 * density).toInt(), (12 * density).toInt())
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply { bottomMargin = (10 * density).toInt() }
+                }
+
+                // Header row: Title + Delete button
+                val headerRow = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                }
+
+                val titleCol = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                }
+
+                val tvName = TextView(this).apply {
+                    text = session.name
+                    textSize = 14f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.text_primary))
+                }
+                titleCol.addView(tvName)
+
+                val tvDate = TextView(this).apply {
+                    text = session.dateLabel
+                    textSize = 10f
+                    setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.text_tertiary))
+                    setPadding(0, (2 * density).toInt(), 0, 0)
+                }
+                titleCol.addView(tvDate)
+                headerRow.addView(titleCol)
+
+                val btnDelete = ImageView(this).apply {
+                    setImageResource(R.drawable.ic_close)
+                    setColorFilter(ContextCompat.getColor(this@HomeActivity, R.color.text_tertiary))
+                    setPadding((6 * density).toInt(), (6 * density).toInt(), (6 * density).toInt(), (6 * density).toInt())
+                    layoutParams = LinearLayout.LayoutParams((30 * density).toInt(), (30 * density).toInt())
+                    setOnClickListener {
+                        AlertDialog.Builder(this@HomeActivity, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
+                            .setTitle("Delete Trip Record")
+                            .setMessage("Remove '${session.name}' from history?")
+                            .setPositiveButton("Delete") { _, _ ->
+                                dbHelper.deleteShoppingSession(session.id)
+                                renderSessionList()
+                            }
+                            .setNegativeButton("Cancel", null)
+                            .show()
+                    }
+                }
+                headerRow.addView(btnDelete)
+                card.addView(headerRow)
+
+                // Stats row
+                val statsRow = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    setPadding(0, (8 * density).toInt(), 0, 0)
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                }
+
+                val cur = session.currency
+                val tvSpent = TextView(this).apply {
+                    text = "${session.itemCount} items • Spent: $cur ${"%.0f".format(session.totalSpent)}"
+                    textSize = 12f
+                    setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.text_secondary))
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                }
+                statsRow.addView(tvSpent)
+
+                val tvNet = TextView(this).apply {
+                    textSize = 11f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setPadding((8 * density).toInt(), (3 * density).toInt(), (8 * density).toInt(), (3 * density).toInt())
+                    setBackgroundResource(R.drawable.pill_background)
+                    if (session.netResult > 0) {
+                        text = "💚 Saved ${"%.0f".format(session.netResult)}"
+                        setTextColor(android.graphics.Color.parseColor("#10B981"))
+                    } else if (session.netResult < 0) {
+                        text = "🔴 +${"%.0f".format(-session.netResult)} over"
+                        setTextColor(android.graphics.Color.parseColor("#F87171"))
+                    } else {
+                        text = "✓ On budget"
+                        setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.text_secondary))
+                    }
+                }
+                statsRow.addView(tvNet)
+                card.addView(statsRow)
+
+                // Tap to view receipt breakdown
+                card.setOnClickListener {
+                    showTripReceiptDialog(session)
+                }
+
+                container.addView(card)
+            }
+        }
+
+        renderSessionList()
+
+        dialog = AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
+            .setTitle("📜 Shopping Trip History")
+            .setView(scrollView)
+            .setPositiveButton("Close", null)
+            .create()
+        dialog?.show()
+    }
+
+    private fun showTripReceiptDialog(session: ShoppingSession) {
+        val items = session.parseItems()
+        val density = resources.displayMetrics.density
+        val cur = session.currency
+
+        val scroll = androidx.core.widget.NestedScrollView(this).apply {
+            isFillViewport = true
+        }
+
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding((16 * density).toInt(), (12 * density).toInt(), (16 * density).toInt(), (16 * density).toInt())
+        }
+        scroll.addView(container)
+
+        // Summary banner
+        val tvBanner = TextView(this).apply {
+            text = "${session.dateLabel}\nTotal Planned: $cur ${"%.0f".format(session.totalBudget)} | Spent: $cur ${"%.0f".format(session.totalSpent)}"
+            textSize = 12f
+            setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.gold_primary))
+            setPadding(0, 0, 0, (12 * density).toInt())
+        }
+        container.addView(tvBanner)
+
+        // Table headers
+        val headerTable = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, 0, 0, (6 * density).toInt())
+        }
+        val thItem = TextView(this).apply {
+            text = "ITEM"
+            textSize = 10f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.text_tertiary))
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.5f)
+        }
+        val thPlan = TextView(this).apply {
+            text = "PLANNED"
+            textSize = 10f
+            gravity = android.view.Gravity.END
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.text_tertiary))
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val thActual = TextView(this).apply {
+            text = "ACTUAL"
+            textSize = 10f
+            gravity = android.view.Gravity.END
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.text_tertiary))
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        headerTable.addView(thItem)
+        headerTable.addView(thPlan)
+        headerTable.addView(thActual)
+        container.addView(headerTable)
+
+        // Divider line
+        val div = View(this).apply {
+            setBackgroundColor(ContextCompat.getColor(this@HomeActivity, R.color.border_subtle))
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (1 * density).toInt().coerceAtLeast(1)).apply {
+                bottomMargin = (8 * density).toInt()
+            }
+        }
+        container.addView(div)
+
+        for (item in items) {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(0, (4 * density).toInt(), 0, (4 * density).toInt())
+                gravity = android.view.Gravity.CENTER_VERTICAL
+            }
+
+            val tvTitle = TextView(this).apply {
+                val qtyStr = if (item.quantity > 1) " (${item.quantity}×)" else ""
+                text = "${item.title}$qtyStr"
+                textSize = 13f
+                setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.text_primary))
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.5f)
+            }
+
+            val tvPlan = TextView(this).apply {
+                text = if (item.plannedPrice > 0) "%.0f".format(item.totalPlanned) else "—"
+                textSize = 12f
+                gravity = android.view.Gravity.END
+                setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.text_secondary))
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+
+            val tvAct = TextView(this).apply {
+                text = if (item.actualPrice > 0) "%.0f".format(item.totalActual) else "—"
+                textSize = 12f
+                gravity = android.view.Gravity.END
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                if (item.hasSavings) {
+                    setTextColor(android.graphics.Color.parseColor("#10B981"))
+                } else if (item.isOverBudget) {
+                    setTextColor(android.graphics.Color.parseColor("#F87171"))
+                } else {
+                    setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.text_primary))
+                }
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+
+            row.addView(tvTitle)
+            row.addView(tvPlan)
+            row.addView(tvAct)
+            container.addView(row)
+        }
+
+        AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
+            .setTitle(session.name)
+            .setView(scroll)
+            .setPositiveButton("Close", null)
             .show()
     }
 

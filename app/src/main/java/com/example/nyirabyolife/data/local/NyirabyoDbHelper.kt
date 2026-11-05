@@ -8,6 +8,7 @@ import com.example.nyirabyolife.data.model.FocusSession
 import com.example.nyirabyolife.data.model.GratitudeEntry
 import com.example.nyirabyolife.data.model.Mission
 import com.example.nyirabyolife.data.model.PrayerItem
+import com.example.nyirabyolife.data.model.ShoppingSession
 import com.example.nyirabyolife.data.model.TodoItem
 import com.example.nyirabyolife.data.model.UrgeLog
 import com.example.nyirabyolife.data.model.WeeklyPlanTask
@@ -23,7 +24,7 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
 
     companion object {
         const val DATABASE_NAME = "nyirabyo_life.db"
-        const val DATABASE_VERSION = 5
+        const val DATABASE_VERSION = 6
 
         @Volatile
         private var instance: NyirabyoDbHelper? = null
@@ -66,6 +67,23 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
         try { db.execSQL("ALTER TABLE todos ADD COLUMN actual_price REAL DEFAULT 0.0") } catch (_: Exception) {}
         try { db.execSQL("ALTER TABLE todos ADD COLUMN quantity INTEGER DEFAULT 1") } catch (_: Exception) {}
         try { db.execSQL("ALTER TABLE todos ADD COLUMN currency TEXT DEFAULT 'RWF'") } catch (_: Exception) {}
+        // Shopping trip history (added in DB version 6)
+        try {
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS shopping_sessions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    date_label TEXT NOT NULL,
+                    created_at INTEGER NOT NULL,
+                    total_budget REAL DEFAULT 0.0,
+                    total_spent REAL DEFAULT 0.0,
+                    net_result REAL DEFAULT 0.0,
+                    currency TEXT DEFAULT 'RWF',
+                    item_count INTEGER DEFAULT 0,
+                    items_json TEXT DEFAULT '[]'
+                )
+            """.trimIndent())
+        } catch (_: Exception) {}
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -153,6 +171,21 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
                 actual_price REAL DEFAULT 0.0,
                 quantity INTEGER DEFAULT 1,
                 currency TEXT DEFAULT 'RWF'
+            )
+        """.trimIndent())
+
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS shopping_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                date_label TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                total_budget REAL DEFAULT 0.0,
+                total_spent REAL DEFAULT 0.0,
+                net_result REAL DEFAULT 0.0,
+                currency TEXT DEFAULT 'RWF',
+                item_count INTEGER DEFAULT 0,
+                items_json TEXT DEFAULT '[]'
             )
         """.trimIndent())
     }
@@ -1104,6 +1137,77 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
     ) {
         val netResult: Double get() = totalSaved - totalOverspent
         val isUnderBudget: Boolean get() = netResult >= 0
+    }
+
+    // --- SHOPPING TRIP HISTORY ---
+    fun saveShoppingSession(session: ShoppingSession): Long {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put("name", session.name)
+            put("date_label", session.dateLabel)
+            put("created_at", session.createdAt)
+            put("total_budget", session.totalBudget)
+            put("total_spent", session.totalSpent)
+            put("net_result", session.netResult)
+            put("currency", session.currency)
+            put("item_count", session.itemCount)
+            put("items_json", session.itemsJson)
+        }
+        return db.insert("shopping_sessions", null, values)
+    }
+
+    fun getAllShoppingSessions(): List<ShoppingSession> {
+        val list = mutableListOf<ShoppingSession>()
+        val db = readableDatabase
+        val cursor = db.query(
+            "shopping_sessions",
+            null,
+            null,
+            null,
+            null,
+            null,
+            "created_at DESC"
+        )
+        cursor.use {
+            while (it.moveToNext()) {
+                list.add(cursorToShoppingSession(it))
+            }
+        }
+        return list
+    }
+
+    fun deleteShoppingSession(id: Long) {
+        writableDatabase.delete("shopping_sessions", "id = ?", arrayOf(id.toString()))
+    }
+
+    /** Looks through shopping history for the most recent price paid for an item */
+    fun findPreviousPriceForItem(itemTitle: String): Pair<Double, String>? {
+        val sessions = getAllShoppingSessions()
+        val query = itemTitle.trim().lowercase()
+        for (session in sessions) {
+            val items = session.parseItems()
+            for (item in items) {
+                if (item.title.trim().lowercase() == query && item.actualPrice > 0.0) {
+                    return Pair(item.actualPrice, session.dateLabel)
+                }
+            }
+        }
+        return null
+    }
+
+    private fun cursorToShoppingSession(cursor: android.database.Cursor): ShoppingSession {
+        return ShoppingSession(
+            id = cursor.getLong(cursor.getColumnIndexOrThrow("id")),
+            name = cursor.getString(cursor.getColumnIndexOrThrow("name")),
+            dateLabel = cursor.getString(cursor.getColumnIndexOrThrow("date_label")),
+            createdAt = cursor.getLong(cursor.getColumnIndexOrThrow("created_at")),
+            totalBudget = cursor.getDouble(cursor.getColumnIndexOrThrow("total_budget")),
+            totalSpent = cursor.getDouble(cursor.getColumnIndexOrThrow("total_spent")),
+            netResult = cursor.getDouble(cursor.getColumnIndexOrThrow("net_result")),
+            currency = cursor.getString(cursor.getColumnIndexOrThrow("currency")),
+            itemCount = cursor.getInt(cursor.getColumnIndexOrThrow("item_count")),
+            itemsJson = cursor.getString(cursor.getColumnIndexOrThrow("items_json"))
+        )
     }
 }
 

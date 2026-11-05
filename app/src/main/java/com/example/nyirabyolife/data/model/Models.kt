@@ -198,3 +198,50 @@ data class TodoItem(
     /** Whether this item cost more than planned */
     val isOverBudget: Boolean get() = plannedPrice > 0.0 && actualPrice > 0.0 && actualPrice > plannedPrice
 }
+
+data class ShoppingSessionItem(
+    val title: String,
+    val plannedPrice: Double,
+    val actualPrice: Double,
+    val quantity: Int = 1,
+    val note: String = ""
+) {
+    val totalPlanned: Double get() = plannedPrice * quantity
+    val totalActual: Double get() = if (actualPrice > 0.0) actualPrice * quantity else totalPlanned
+    val priceDifference: Double get() = totalPlanned - totalActual
+    val hasSavings: Boolean get() = plannedPrice > 0.0 && actualPrice > 0.0 && actualPrice < plannedPrice
+    val isOverBudget: Boolean get() = plannedPrice > 0.0 && actualPrice > 0.0 && actualPrice > plannedPrice
+}
+
+data class ShoppingSession(
+    val id: Long = 0,
+    val name: String,
+    val dateLabel: String,
+    val createdAt: Long = System.currentTimeMillis(),
+    val totalBudget: Double,
+    val totalSpent: Double,
+    val netResult: Double,
+    val currency: String = "RWF",
+    val itemCount: Int,
+    val itemsJson: String = "[]"
+) {
+    fun parseItems(): List<ShoppingSessionItem> {
+        val list = mutableListOf<ShoppingSessionItem>()
+        try {
+            val arr = org.json.JSONArray(itemsJson)
+            for (i in 0 until arr.length()) {
+                val obj = arr.getJSONObject(i)
+                list.add(
+                    ShoppingSessionItem(
+                        title = obj.optString("title", ""),
+                        plannedPrice = obj.optDouble("plannedPrice", 0.0),
+                        actualPrice = obj.optDouble("actualPrice", 0.0),
+                        quantity = obj.optInt("quantity", 1),
+                        note = obj.optString("note", "")
+                    )
+                )
+            }
+        } catch (_: Exception) {}
+        return list
+    }
+}

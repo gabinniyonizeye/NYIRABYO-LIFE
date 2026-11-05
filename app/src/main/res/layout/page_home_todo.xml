@@ -302,6 +302,43 @@
                     android:layout_marginStart="8dp"
                     android:visibility="gone" />
             </LinearLayout>
+
+            <!-- Action Buttons: History & Finish Trip -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="10dp">
+
+                <TextView
+                    android:id="@+id/btnViewShoppingHistory"
+                    android:layout_width="0dp"
+                    android:layout_height="34dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:background="@drawable/pill_background"
+                    android:paddingHorizontal="10dp"
+                    android:text="📜 Trip History"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:foreground="?attr/selectableItemBackground"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/btnFinishMarketTrip"
+                    android:layout_width="0dp"
+                    android:layout_height="34dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:background="@drawable/pill_background"
+                    android:paddingHorizontal="10dp"
+                    android:text="📦 Finish &amp; Save"
+                    android:textColor="@color/gold_primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:foreground="?attr/selectableItemBackground" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- Quick Add Todo Card -->
