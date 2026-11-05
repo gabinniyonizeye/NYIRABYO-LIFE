@@ -66,6 +66,9 @@ class WeeklyPlanActivity : AppCompatActivity() {
         currentYear = cal.get(Calendar.YEAR)
         selectedDayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
 
+        dbHelper.ensurePermanentWakeupAndBedtime(currentWeekOfYear, currentYear)
+        TaskAlarmScheduler.schedulePermanentAlarms(this)
+
         if (!com.example.nyirabyolife.data.local.PreferencesManager.getInstance(this).isTasksCustomizedByUser()) {
             dbHelper.ensureDefaultSundayWeeklyPlanIfEmpty(currentWeekOfYear, currentYear)
         }
@@ -81,9 +84,11 @@ class WeeklyPlanActivity : AppCompatActivity() {
                 .setPositiveButton("Reset Everything") { _, _ ->
                     TaskAlarmScheduler.cancelAllAlarms(this)
                     dbHelper.resetAllTasks()
+                    dbHelper.ensurePermanentWakeupAndBedtime(currentWeekOfYear, currentYear)
+                    TaskAlarmScheduler.schedulePermanentAlarms(this)
                     loadTasksForSelectedDay()
                     renderDayTabs()
-                    Toast.makeText(this, "All tasks cleared! Set everything on your own.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "Schedule reset! Permanent Wake Up (5:00 AM) and BedTime (22:00) preserved.", Toast.LENGTH_LONG).show()
                 }
                 .setNegativeButton("Cancel", null)
                 .show()
@@ -443,24 +448,24 @@ class WeeklyPlanActivity : AppCompatActivity() {
         updateCalculatedPreview()
 
         dialogBinding.tvQuickPresets.setOnClickListener {
-            // Cycle through foundation presets: 07:00, 07:10, 22:00
+            // Cycle through foundation presets: 05:00, 05:15, 22:00
             val curHour = dialogBinding.etHour.text.toString()
-            if (curHour == "07" && dialogBinding.etMinute.text.toString() == "00") {
-                dialogBinding.etHour.setText("07")
-                dialogBinding.etMinute.setText("10")
-                dialogBinding.etTaskTitle.setText("Pray & Scripture at 7:10")
+            if (curHour == "05" && dialogBinding.etMinute.text.toString() == "00") {
+                dialogBinding.etHour.setText("05")
+                dialogBinding.etMinute.setText("15")
+                dialogBinding.etTaskTitle.setText("Pray & Scripture at 5:15")
                 dialogBinding.spinnerTaskMode.setSelection(3) // Meditation
                 dialogBinding.spinnerDuration.setSelection(1) // 30 min
-            } else if (curHour == "07" && dialogBinding.etMinute.text.toString() == "10") {
+            } else if (curHour == "05" && dialogBinding.etMinute.text.toString() == "15") {
                 dialogBinding.etHour.setText("22")
                 dialogBinding.etMinute.setText("00")
                 dialogBinding.etTaskTitle.setText("BedTime 22:00")
                 dialogBinding.spinnerTaskMode.setSelection(4) // BedTime
                 dialogBinding.spinnerDuration.setSelection(0) // Direct Alarm
             } else {
-                dialogBinding.etHour.setText("07")
+                dialogBinding.etHour.setText("05")
                 dialogBinding.etMinute.setText("00")
-                dialogBinding.etTaskTitle.setText("Wake Up at 7:00")
+                dialogBinding.etTaskTitle.setText("Wake Up at 5:00 AM")
                 dialogBinding.spinnerTaskMode.setSelection(0)
                 dialogBinding.spinnerDuration.setSelection(0) // Direct Alarm
             }

@@ -71,6 +71,13 @@ class HomeActivity : AppCompatActivity() {
             prefs.setTasksCustomizedByUser(true)
         }
 
+        // Ensure permanent 5:00 AM wakeup and 22:00 bedtime are seeded and scheduled
+        val cal = Calendar.getInstance()
+        val week = cal.get(Calendar.WEEK_OF_YEAR)
+        val year = cal.get(Calendar.YEAR)
+        dbHelper.ensurePermanentWakeupAndBedtime(week, year)
+        com.example.nyirabyolife.util.TaskAlarmScheduler.schedulePermanentAlarms(this)
+
         recoveryAuthManager = RecoveryAuthManager(
             activity = this,
             onSuccess = {
@@ -96,6 +103,7 @@ class HomeActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         refreshAllData()
+        com.example.nyirabyolife.util.TaskAlarmScheduler.schedulePermanentAlarms(this)
         com.example.nyirabyolife.util.HabitationReminderManager.checkAndShowAutomaticReminders(this)
     }
 

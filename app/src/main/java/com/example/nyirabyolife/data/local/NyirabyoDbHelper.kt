@@ -10,6 +10,7 @@ import com.example.nyirabyolife.data.model.Mission
 import com.example.nyirabyolife.data.model.PrayerItem
 import com.example.nyirabyolife.data.model.UrgeLog
 import com.example.nyirabyolife.data.model.WeeklyPlanTask
+import com.example.nyirabyolife.util.TaskAlarmScheduler
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -182,6 +183,75 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
         return null
     }
 
+    fun ensurePermanentWakeupAndBedtime(weekOfYear: Int, year: Int) {
+        val allTasks = getAllWeeklyTasks()
+        for (day in Calendar.SUNDAY..Calendar.SATURDAY) {
+            val dayTasks = allTasks.filter { it.dayOfWeek == day }
+
+            // 1. Permanent Wake Up at 5:00 AM
+            val existingWakeup = dayTasks.find { it.title.trim().lowercase().contains("wake up") }
+            if (existingWakeup != null) {
+                if (existingWakeup.timeHour != 5 || existingWakeup.timeMinute != 0 || !existingWakeup.isAlarmEnabled) {
+                    val updated = existingWakeup.copy(
+                        title = "Wake Up at 5:00 AM",
+                        timeHour = 5,
+                        timeMinute = 0,
+                        isAlarmEnabled = true,
+                        durationMinutes = 0
+                    )
+                    updateWeeklyTask(updated)
+                    TaskAlarmScheduler.scheduleTaskAlarm(context, updated)
+                }
+            } else {
+                val newWakeup = WeeklyPlanTask(
+                    title = "Wake Up at 5:00 AM",
+                    dayOfWeek = day,
+                    timeHour = 5,
+                    timeMinute = 0,
+                    isAlarmEnabled = true,
+                    weekOfYear = weekOfYear,
+                    year = year,
+                    taskMode = "NORMAL",
+                    isDaily = true,
+                    durationMinutes = 0
+                )
+                val id = addWeeklyTask(newWakeup)
+                TaskAlarmScheduler.scheduleTaskAlarm(context, newWakeup.copy(id = id))
+            }
+
+            // 2. Permanent BedTime at 22:00
+            val existingBedtime = dayTasks.find { it.title.trim().lowercase().contains("bedtime") }
+            if (existingBedtime != null) {
+                if (existingBedtime.timeHour != 22 || existingBedtime.timeMinute != 0 || !existingBedtime.isAlarmEnabled) {
+                    val updated = existingBedtime.copy(
+                        title = "BedTime 22:00",
+                        timeHour = 22,
+                        timeMinute = 0,
+                        isAlarmEnabled = true,
+                        durationMinutes = 0
+                    )
+                    updateWeeklyTask(updated)
+                    TaskAlarmScheduler.scheduleTaskAlarm(context, updated)
+                }
+            } else {
+                val newBedtime = WeeklyPlanTask(
+                    title = "BedTime 22:00",
+                    dayOfWeek = day,
+                    timeHour = 22,
+                    timeMinute = 0,
+                    isAlarmEnabled = true,
+                    weekOfYear = weekOfYear,
+                    year = year,
+                    taskMode = "BEDTIME",
+                    isDaily = true,
+                    durationMinutes = 0
+                )
+                val id = addWeeklyTask(newBedtime)
+                TaskAlarmScheduler.scheduleTaskAlarm(context, newBedtime.copy(id = id))
+            }
+        }
+    }
+
     fun ensureFoundationTasksForDay(dayOfWeek: Int, weekOfYear: Int, year: Int) {
         if (PreferencesManager.getInstance(context).isTasksCustomizedByUser()) return
 
@@ -191,15 +261,16 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
         if (!titles.any { it.contains("wake up") }) {
             addWeeklyTask(
                 WeeklyPlanTask(
-                    title = "Wake Up at 7:00",
+                    title = "Wake Up at 5:00 AM",
                     dayOfWeek = dayOfWeek,
-                    timeHour = 7,
+                    timeHour = 5,
                     timeMinute = 0,
                     isAlarmEnabled = true,
                     weekOfYear = weekOfYear,
                     year = year,
                     taskMode = "NORMAL",
-                    isDaily = true
+                    isDaily = true,
+                    durationMinutes = 0
                 )
             )
         }
@@ -207,15 +278,16 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
         if (!titles.any { it.contains("pray") || it.contains("scripture") }) {
             addWeeklyTask(
                 WeeklyPlanTask(
-                    title = "Pray & Scripture at 7:10",
+                    title = "Pray & Scripture at 5:15",
                     dayOfWeek = dayOfWeek,
-                    timeHour = 7,
-                    timeMinute = 10,
+                    timeHour = 5,
+                    timeMinute = 15,
                     isAlarmEnabled = true,
                     weekOfYear = weekOfYear,
                     year = year,
                     taskMode = "MEDITATION",
-                    isDaily = true
+                    isDaily = true,
+                    durationMinutes = 30
                 )
             )
         }
@@ -231,13 +303,15 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
                     weekOfYear = weekOfYear,
                     year = year,
                     taskMode = "BEDTIME",
-                    isDaily = true
+                    isDaily = true,
+                    durationMinutes = 0
                 )
             )
         }
     }
 
     fun getSynchronizedDailyMissions(date: String, dayOfWeek: Int, weekOfYear: Int, year: Int): List<Mission> {
+        ensurePermanentWakeupAndBedtime(weekOfYear, year)
         if (!PreferencesManager.getInstance(context).isTasksCustomizedByUser()) {
             ensureDefaultSundayWeeklyPlanIfEmpty(weekOfYear, year)
             ensureFoundationTasksForDay(dayOfWeek, weekOfYear, year)
@@ -554,6 +628,23 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
     }
 
     // --- WEEKLY PLANS WITH STRONG ALARM COLLABORATION ---
+
+    /** Returns ALL weekly tasks across every week/year — needed to reschedule daily alarms after boot. */
+    fun getAllWeeklyTasks(): List<WeeklyPlanTask> {
+        val list = mutableListOf<WeeklyPlanTask>()
+        val db = readableDatabase
+        val cursor = db.query(
+            "weekly_plans", null, null, null, null, null,
+            "day_of_week ASC, time_hour ASC, time_minute ASC"
+        )
+        cursor.use {
+            while (it.moveToNext()) {
+                list.add(cursorToWeeklyTask(it))
+            }
+        }
+        return list
+    }
+
     fun getWeeklyTasksForWeek(weekOfYear: Int, year: Int): List<WeeklyPlanTask> {
         val list = mutableListOf<WeeklyPlanTask>()
         val db = readableDatabase
