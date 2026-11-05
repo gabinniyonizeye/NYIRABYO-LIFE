@@ -103,4 +103,69 @@ class NyirabyoCoreTest {
         assertFalse(1380 in startMinutes..endMinutes) // 23:00
         assertFalse(60 in startMinutes..endMinutes)   // 01:00
     }
+
+    @Test
+    fun todoItem_groupingAndBadges() {
+        val todoWithGroup = com.example.nyirabyolife.data.model.TodoItem(
+            title = "buying chairs",
+            groupName = "My Office"
+        )
+        assertEquals("📁 My Office", todoWithGroup.groupBadgeText)
+
+        val todoWithoutGroup = com.example.nyirabyolife.data.model.TodoItem(
+            title = "General item",
+            groupName = ""
+        )
+        assertEquals(null, todoWithoutGroup.groupBadgeText)
+    }
+
+    @Test
+    fun todoItem_financialCalculationsAndSavings() {
+        // Item with price reduction (savings)
+        val savedItem = com.example.nyirabyolife.data.model.TodoItem(
+            title = "Office Chairs",
+            plannedPrice = 45000.0,
+            actualPrice = 38000.0,
+            quantity = 2
+        )
+        assertEquals(90000.0, savedItem.totalPlanned, 0.001)
+        assertEquals(76000.0, savedItem.totalActual, 0.001)
+        assertEquals(14000.0, savedItem.priceDifference, 0.001)
+        assertTrue(savedItem.hasSavings)
+        assertFalse(savedItem.isOverBudget)
+
+        // Item with price increase (over budget)
+        val overItem = com.example.nyirabyolife.data.model.TodoItem(
+            title = "Room Light",
+            plannedPrice = 15000.0,
+            actualPrice = 20000.0,
+            quantity = 1
+        )
+        assertEquals(15000.0, overItem.totalPlanned, 0.001)
+        assertEquals(20000.0, overItem.totalActual, 0.001)
+        assertEquals(-5000.0, overItem.priceDifference, 0.001)
+        assertFalse(overItem.hasSavings)
+        assertTrue(overItem.isOverBudget)
+    }
+
+    @Test
+    fun todoItem_timeframeCountdown() {
+        val now = System.currentTimeMillis()
+        val futureItem = com.example.nyirabyolife.data.model.TodoItem(
+            title = "Finish Graphics",
+            targetType = "DAYS",
+            targetValue = 3,
+            deadlineTimestamp = now + (3 * 86400000L)
+        )
+        assertNotNull(futureItem.timeframeBadgeText)
+        assertTrue(futureItem.timeframeBadgeText!!.contains("left") || futureItem.timeframeBadgeText!!.contains("⏳"))
+
+        // Completed item shows Done
+        val doneItem = futureItem.copy(isCompleted = true)
+        assertEquals("✓ Done", doneItem.timeframeBadgeText)
+
+        // Overdue item shows Overdue
+        val overdueItem = futureItem.copy(deadlineTimestamp = now - 86400000L * 2)
+        assertTrue(overdueItem.timeframeBadgeText!!.contains("overdue"))
+    }
 }

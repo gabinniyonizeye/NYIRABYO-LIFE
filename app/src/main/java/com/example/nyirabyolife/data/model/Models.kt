@@ -169,7 +169,12 @@ data class TodoItem(
     val plannedPrice: Double = 0.0,  // budget / expected price
     val actualPrice: Double = 0.0,   // real price found / spent
     val quantity: Int = 1,           // quantity / units
-    val currency: String = "RWF"     // currency symbol (RWF, USD, etc.)
+    val currency: String = "RWF",    // currency symbol (RWF, USD, etc.)
+    // Grouping & Time horizon fields
+    val groupName: String = "",      // e.g. "My Office", "Market", "Graphics"
+    val targetType: String = "NONE", // "NONE", "DAY", "DAYS", "WEEK", "WEEKS", "MONTH"
+    val targetValue: Int = 0,        // e.g. 3 (days), 2 (weeks)
+    val deadlineTimestamp: Long = 0L // epoch millis when task is target-due
 ) {
     val categoryBadgeText: String
         get() = when (category.uppercase()) {
@@ -177,6 +182,37 @@ data class TodoItem(
             "PROJECT", "GRAPHICS", "WORK" -> "🎨 Project"
             "GOAL", "ACHIEVEMENT" -> "🎯 Goal"
             else -> "📋 Todo"
+        }
+
+    val groupBadgeText: String?
+        get() = if (groupName.isNotBlank()) "📁 $groupName" else null
+
+    val timeframeBadgeText: String?
+        get() {
+            if (deadlineTimestamp <= 0L && targetType == "NONE") return null
+            val now = System.currentTimeMillis()
+            val diffMs = deadlineTimestamp - now
+            val diffHours = diffMs / (1000 * 60 * 60)
+            val diffDays = diffHours / 24
+
+            return when {
+                isCompleted -> "✓ Done"
+                diffMs < 0 -> {
+                    val overdueDays = kotlin.math.abs(diffDays).coerceAtLeast(1)
+                    "⚠️ ${overdueDays}d overdue"
+                }
+                diffHours <= 24 -> "⏳ Today"
+                diffDays == 1L -> "⏳ Tomorrow"
+                diffDays < 7 -> "⏳ ${diffDays}d left"
+                diffDays < 30 -> {
+                    val weeks = (diffDays / 7).coerceAtLeast(1)
+                    "⏳ ${weeks}w left"
+                }
+                else -> {
+                    val months = (diffDays / 30).coerceAtLeast(1)
+                    "⏳ ${months}mo left"
+                }
+            }
         }
 
     /** True if this item has any financial data entered */

@@ -35,7 +35,7 @@
             android:layout_marginEnd="8dp"
             android:orientation="vertical">
 
-            <!-- Category Badge + Quantity -->
+            <!-- Category Badge + Group Badge + Timeframe Badge + Quantity -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -55,6 +55,32 @@
                     android:textSize="10sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.04" />
+
+                <TextView
+                    android:id="@+id/tvTodoGroupBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/pill_background"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="2dp"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:layout_marginStart="4dp"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/tvTodoTimeframeBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/pill_background"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="2dp"
+                    android:textColor="@color/gold_primary"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:layout_marginStart="4dp"
+                    android:visibility="gone" />
 
                 <TextView
                     android:id="@+id/tvTodoQuantityBadge"

@@ -24,7 +24,7 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
 
     companion object {
         const val DATABASE_NAME = "nyirabyo_life.db"
-        const val DATABASE_VERSION = 6
+        const val DATABASE_VERSION = 7
 
         @Volatile
         private var instance: NyirabyoDbHelper? = null
@@ -67,6 +67,11 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
         try { db.execSQL("ALTER TABLE todos ADD COLUMN actual_price REAL DEFAULT 0.0") } catch (_: Exception) {}
         try { db.execSQL("ALTER TABLE todos ADD COLUMN quantity INTEGER DEFAULT 1") } catch (_: Exception) {}
         try { db.execSQL("ALTER TABLE todos ADD COLUMN currency TEXT DEFAULT 'RWF'") } catch (_: Exception) {}
+        // Grouping & Time horizons (added in DB version 7)
+        try { db.execSQL("ALTER TABLE todos ADD COLUMN group_name TEXT DEFAULT ''") } catch (_: Exception) {}
+        try { db.execSQL("ALTER TABLE todos ADD COLUMN target_type TEXT DEFAULT 'NONE'") } catch (_: Exception) {}
+        try { db.execSQL("ALTER TABLE todos ADD COLUMN target_value INTEGER DEFAULT 0") } catch (_: Exception) {}
+        try { db.execSQL("ALTER TABLE todos ADD COLUMN deadline_timestamp INTEGER DEFAULT 0") } catch (_: Exception) {}
         // Shopping trip history (added in DB version 6)
         try {
             db.execSQL("""
@@ -170,7 +175,11 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
                 planned_price REAL DEFAULT 0.0,
                 actual_price REAL DEFAULT 0.0,
                 quantity INTEGER DEFAULT 1,
-                currency TEXT DEFAULT 'RWF'
+                currency TEXT DEFAULT 'RWF',
+                group_name TEXT DEFAULT '',
+                target_type TEXT DEFAULT 'NONE',
+                target_value INTEGER DEFAULT 0,
+                deadline_timestamp INTEGER DEFAULT 0
             )
         """.trimIndent())
 
@@ -984,11 +993,58 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
     }
 
     // --- TODO ITEMS (FLEXIBLE UNTIMED LISTS, MARKET & ACHIEVEMENTS) ---
-    fun getAllTodos(categoryFilter: String? = null): List<TodoItem> {
+    fun getAllTodos(
+        categoryFilter: String? = null,
+        groupFilter: String? = null,
+        timeframeFilter: String? = null
+    ): List<TodoItem> {
         val list = mutableListOf<TodoItem>()
         val db = readableDatabase
-        val selection = if (categoryFilter != null && categoryFilter != "ALL") "category = ?" else null
-        val selectionArgs = if (categoryFilter != null && categoryFilter != "ALL") arrayOf(categoryFilter) else null
+
+        val conditions = mutableListOf<String>()
+        val args = mutableListOf<String>()
+
+        if (categoryFilter != null && categoryFilter != "ALL") {
+            conditions.add("category = ?")
+            args.add(categoryFilter)
+        }
+
+        if (!groupFilter.isNullOrBlank() && groupFilter != "ALL") {
+            conditions.add("group_name = ?")
+            args.add(groupFilter)
+        }
+
+        val cal = Calendar.getInstance()
+        when (timeframeFilter?.uppercase()) {
+            "TODAY" -> {
+                cal.set(Calendar.HOUR_OF_DAY, 23)
+                cal.set(Calendar.MINUTE, 59)
+                cal.set(Calendar.SECOND, 59)
+                val endOfDay = cal.timeInMillis
+                conditions.add("(target_type = 'DAY' OR (deadline_timestamp > 0 AND deadline_timestamp <= ?))")
+                args.add(endOfDay.toString())
+            }
+            "WEEK" -> {
+                cal.add(Calendar.DAY_OF_YEAR, 7)
+                cal.set(Calendar.HOUR_OF_DAY, 23)
+                cal.set(Calendar.MINUTE, 59)
+                val endOfWeek = cal.timeInMillis
+                conditions.add("(target_type IN ('DAY', 'DAYS', 'WEEK', 'WEEKS') OR (deadline_timestamp > 0 AND deadline_timestamp <= ?))")
+                args.add(endOfWeek.toString())
+            }
+            "MONTH" -> {
+                cal.add(Calendar.DAY_OF_YEAR, 30)
+                cal.set(Calendar.HOUR_OF_DAY, 23)
+                cal.set(Calendar.MINUTE, 59)
+                val endOfMonth = cal.timeInMillis
+                conditions.add("(target_type IN ('DAY', 'DAYS', 'WEEK', 'WEEKS', 'MONTH') OR (deadline_timestamp > 0 AND deadline_timestamp <= ?))")
+                args.add(endOfMonth.toString())
+            }
+        }
+
+        val selection = if (conditions.isNotEmpty()) conditions.joinToString(" AND ") else null
+        val selectionArgs = if (args.isNotEmpty()) args.toTypedArray() else null
+
         val cursor = db.query(
             "todos",
             null,
@@ -996,11 +1052,26 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
             selectionArgs,
             null,
             null,
-            "is_completed ASC, created_at DESC"
+            "is_completed ASC, group_name ASC, created_at DESC"
         )
         cursor.use {
             while (it.moveToNext()) {
                 list.add(cursorToTodoItem(it))
+            }
+        }
+        return list
+    }
+
+    fun getAllGroups(): List<String> {
+        val list = mutableListOf<String>()
+        val db = readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT DISTINCT group_name FROM todos WHERE group_name IS NOT NULL AND group_name != '' ORDER BY group_name ASC",
+            null
+        )
+        cursor.use {
+            while (it.moveToNext()) {
+                list.add(it.getString(0))
             }
         }
         return list
@@ -1019,6 +1090,10 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
             put("actual_price", todo.actualPrice)
             put("quantity", todo.quantity)
             put("currency", todo.currency)
+            put("group_name", todo.groupName)
+            put("target_type", todo.targetType)
+            put("target_value", todo.targetValue)
+            put("deadline_timestamp", todo.deadlineTimestamp)
         }
         return db.insert("todos", null, values)
     }
@@ -1035,6 +1110,10 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
             put("actual_price", todo.actualPrice)
             put("quantity", todo.quantity)
             put("currency", todo.currency)
+            put("group_name", todo.groupName)
+            put("target_type", todo.targetType)
+            put("target_value", todo.targetValue)
+            put("deadline_timestamp", todo.deadlineTimestamp)
         }
         db.update("todos", values, "id = ?", arrayOf(todo.id.toString()))
     }
@@ -1092,6 +1171,14 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
         val quantity = if (qtyIdx != -1) cursor.getInt(qtyIdx) else 1
         val currIdx = cursor.getColumnIndex("currency")
         val currency = if (currIdx != -1) cursor.getString(currIdx) ?: "RWF" else "RWF"
+        val grpIdx = cursor.getColumnIndex("group_name")
+        val groupName = if (grpIdx != -1) cursor.getString(grpIdx) ?: "" else ""
+        val ttIdx = cursor.getColumnIndex("target_type")
+        val targetType = if (ttIdx != -1) cursor.getString(ttIdx) ?: "NONE" else "NONE"
+        val tvIdx = cursor.getColumnIndex("target_value")
+        val targetValue = if (tvIdx != -1) cursor.getInt(tvIdx) else 0
+        val dlIdx = cursor.getColumnIndex("deadline_timestamp")
+        val deadlineTimestamp = if (dlIdx != -1) cursor.getLong(dlIdx) else 0L
 
         return TodoItem(
             id = id,
@@ -1104,7 +1191,11 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
             plannedPrice = plannedPrice,
             actualPrice = actualPrice,
             quantity = quantity.coerceAtLeast(1),
-            currency = currency
+            currency = currency,
+            groupName = groupName,
+            targetType = targetType,
+            targetValue = targetValue,
+            deadlineTimestamp = deadlineTimestamp
         )
     }
 
