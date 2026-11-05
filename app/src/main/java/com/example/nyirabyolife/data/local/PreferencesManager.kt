@@ -373,8 +373,10 @@ class PreferencesManager(context: Context) {
     fun isBedtimeLockdownActive(): Boolean {
         val cal = Calendar.getInstance()
         val hour = cal.get(Calendar.HOUR_OF_DAY)
-        // 22:00 (10 PM) until 05:00 (5 AM)
-        return hour >= 22 || hour < 5
+        val minute = cal.get(Calendar.MINUTE)
+        val currentMinutes = hour * 60 + minute
+        // 22:30 (10:30 PM) until 05:30 (5:30 AM) = Exactly 7 hours of sleep
+        return currentMinutes >= (22 * 60 + 30) || currentMinutes < (5 * 60 + 30)
     }
 
     fun isSocialMediaWindowOpen(): Boolean {

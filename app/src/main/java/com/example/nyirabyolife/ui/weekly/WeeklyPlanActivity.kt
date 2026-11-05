@@ -88,7 +88,7 @@ class WeeklyPlanActivity : AppCompatActivity() {
                     TaskAlarmScheduler.schedulePermanentAlarms(this)
                     loadTasksForSelectedDay()
                     renderDayTabs()
-                    Toast.makeText(this, "Schedule reset! Permanent Wake Up (5:00 AM) and BedTime (22:00) preserved.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "Schedule reset! Permanent Wake Up (5:30 AM) and BedTime (22:30) preserved.", Toast.LENGTH_LONG).show()
                 }
                 .setNegativeButton("Cancel", null)
                 .show()
@@ -448,24 +448,25 @@ class WeeklyPlanActivity : AppCompatActivity() {
         updateCalculatedPreview()
 
         dialogBinding.tvQuickPresets.setOnClickListener {
-            // Cycle through foundation presets: 05:00, 05:15, 22:00
+            // Cycle through foundation presets: 05:30, 05:45, 22:30
             val curHour = dialogBinding.etHour.text.toString()
-            if (curHour == "05" && dialogBinding.etMinute.text.toString() == "00") {
+            val curMin = dialogBinding.etMinute.text.toString()
+            if (curHour == "05" && curMin == "30") {
                 dialogBinding.etHour.setText("05")
-                dialogBinding.etMinute.setText("15")
-                dialogBinding.etTaskTitle.setText("Pray & Scripture at 5:15")
+                dialogBinding.etMinute.setText("45")
+                dialogBinding.etTaskTitle.setText("Pray & Scripture at 5:45")
                 dialogBinding.spinnerTaskMode.setSelection(3) // Meditation
                 dialogBinding.spinnerDuration.setSelection(1) // 30 min
-            } else if (curHour == "05" && dialogBinding.etMinute.text.toString() == "15") {
+            } else if (curHour == "05" && curMin == "45") {
                 dialogBinding.etHour.setText("22")
-                dialogBinding.etMinute.setText("00")
-                dialogBinding.etTaskTitle.setText("BedTime 22:00")
+                dialogBinding.etMinute.setText("30")
+                dialogBinding.etTaskTitle.setText("BedTime 22:30")
                 dialogBinding.spinnerTaskMode.setSelection(4) // BedTime
                 dialogBinding.spinnerDuration.setSelection(0) // Direct Alarm
             } else {
                 dialogBinding.etHour.setText("05")
-                dialogBinding.etMinute.setText("00")
-                dialogBinding.etTaskTitle.setText("Wake Up at 5:00 AM")
+                dialogBinding.etMinute.setText("30")
+                dialogBinding.etTaskTitle.setText("Wake Up at 5:30 AM")
                 dialogBinding.spinnerTaskMode.setSelection(0)
                 dialogBinding.spinnerDuration.setSelection(0) // Direct Alarm
             }

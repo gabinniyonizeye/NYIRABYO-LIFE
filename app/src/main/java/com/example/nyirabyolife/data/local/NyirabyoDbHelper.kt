@@ -188,14 +188,14 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
         for (day in Calendar.SUNDAY..Calendar.SATURDAY) {
             val dayTasks = allTasks.filter { it.dayOfWeek == day }
 
-            // 1. Permanent Wake Up at 5:00 AM
+            // 1. Permanent Wake Up at 5:30 AM
             val existingWakeup = dayTasks.find { it.title.trim().lowercase().contains("wake up") }
             if (existingWakeup != null) {
-                if (existingWakeup.timeHour != 5 || existingWakeup.timeMinute != 0 || !existingWakeup.isAlarmEnabled) {
+                if (existingWakeup.timeHour != 5 || existingWakeup.timeMinute != 30 || !existingWakeup.isAlarmEnabled) {
                     val updated = existingWakeup.copy(
-                        title = "Wake Up at 5:00 AM",
+                        title = "Wake Up at 5:30 AM",
                         timeHour = 5,
-                        timeMinute = 0,
+                        timeMinute = 30,
                         isAlarmEnabled = true,
                         durationMinutes = 0
                     )
@@ -204,10 +204,10 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
                 }
             } else {
                 val newWakeup = WeeklyPlanTask(
-                    title = "Wake Up at 5:00 AM",
+                    title = "Wake Up at 5:30 AM",
                     dayOfWeek = day,
                     timeHour = 5,
-                    timeMinute = 0,
+                    timeMinute = 30,
                     isAlarmEnabled = true,
                     weekOfYear = weekOfYear,
                     year = year,
@@ -219,14 +219,14 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
                 TaskAlarmScheduler.scheduleTaskAlarm(context, newWakeup.copy(id = id))
             }
 
-            // 2. Permanent BedTime at 22:00
+            // 2. Permanent BedTime at 22:30 (giving exactly 7 hours of sleep until 05:30 AM)
             val existingBedtime = dayTasks.find { it.title.trim().lowercase().contains("bedtime") }
             if (existingBedtime != null) {
-                if (existingBedtime.timeHour != 22 || existingBedtime.timeMinute != 0 || !existingBedtime.isAlarmEnabled) {
+                if (existingBedtime.timeHour != 22 || existingBedtime.timeMinute != 30 || !existingBedtime.isAlarmEnabled) {
                     val updated = existingBedtime.copy(
-                        title = "BedTime 22:00",
+                        title = "BedTime 22:30",
                         timeHour = 22,
-                        timeMinute = 0,
+                        timeMinute = 30,
                         isAlarmEnabled = true,
                         durationMinutes = 0
                     )
@@ -235,10 +235,10 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
                 }
             } else {
                 val newBedtime = WeeklyPlanTask(
-                    title = "BedTime 22:00",
+                    title = "BedTime 22:30",
                     dayOfWeek = day,
                     timeHour = 22,
-                    timeMinute = 0,
+                    timeMinute = 30,
                     isAlarmEnabled = true,
                     weekOfYear = weekOfYear,
                     year = year,
@@ -261,10 +261,10 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
         if (!titles.any { it.contains("wake up") }) {
             addWeeklyTask(
                 WeeklyPlanTask(
-                    title = "Wake Up at 5:00 AM",
+                    title = "Wake Up at 5:30 AM",
                     dayOfWeek = dayOfWeek,
                     timeHour = 5,
-                    timeMinute = 0,
+                    timeMinute = 30,
                     isAlarmEnabled = true,
                     weekOfYear = weekOfYear,
                     year = year,
@@ -278,10 +278,10 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
         if (!titles.any { it.contains("pray") || it.contains("scripture") }) {
             addWeeklyTask(
                 WeeklyPlanTask(
-                    title = "Pray & Scripture at 5:15",
+                    title = "Pray & Scripture at 5:45",
                     dayOfWeek = dayOfWeek,
                     timeHour = 5,
-                    timeMinute = 15,
+                    timeMinute = 45,
                     isAlarmEnabled = true,
                     weekOfYear = weekOfYear,
                     year = year,
@@ -295,10 +295,10 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
         if (!titles.any { it.contains("bedtime") }) {
             addWeeklyTask(
                 WeeklyPlanTask(
-                    title = "BedTime 22:00",
+                    title = "BedTime 22:30",
                     dayOfWeek = dayOfWeek,
                     timeHour = 22,
-                    timeMinute = 0,
+                    timeMinute = 30,
                     isAlarmEnabled = true,
                     weekOfYear = weekOfYear,
                     year = year,

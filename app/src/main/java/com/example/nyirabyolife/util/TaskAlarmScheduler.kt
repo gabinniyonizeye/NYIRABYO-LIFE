@@ -68,19 +68,19 @@ object TaskAlarmScheduler {
 
     /**
      * Schedule one of the two permanent (hardcoded) system alarms:
-     * - Wake Up at 05:00 every day (WAKEUP_ALARM_ID)
-     * - Bedtime at 22:00 every day (BEDTIME_ALARM_ID)
-     * These are independent of weekly tasks and survive resets.
+     * - Wake Up at 05:30 every day (WAKEUP_ALARM_ID)
+     * - Bedtime at 22:30 every day (BEDTIME_ALARM_ID)
+     * These guarantee exactly 7 hours of sleep and survive resets.
      */
     fun schedulePermanentWakeupAlarm(context: Context) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-        val triggerTime = computeNextDailyTriggerMillis(5, 0)
+        val triggerTime = computeNextDailyTriggerMillis(5, 30)
 
         val intent = Intent(context, TaskAlarmReceiver::class.java).apply {
             action = TaskAlarmReceiver.ACTION_FIRE_ALARM
             putExtra(EXTRA_TASK_ID, WAKEUP_ALARM_ID.toLong())
-            putExtra(EXTRA_TASK_TITLE, "⏰ Wake Up — 05:00 AM")
-            putExtra(EXTRA_TASK_TIME, "05:00")
+            putExtra(EXTRA_TASK_TITLE, "⏰ Wake Up — 05:30 AM")
+            putExtra(EXTRA_TASK_TIME, "05:30")
             putExtra(EXTRA_TASK_MODE, "NORMAL")
             putExtra(EXTRA_TASK_DURATION_MINUTES, 0)
             putExtra(EXTRA_IS_DAILY, true)
@@ -104,13 +104,13 @@ object TaskAlarmScheduler {
 
     fun schedulePermanentBedtimeAlarm(context: Context) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-        val triggerTime = computeNextDailyTriggerMillis(22, 0)
+        val triggerTime = computeNextDailyTriggerMillis(22, 30)
 
         val intent = Intent(context, TaskAlarmReceiver::class.java).apply {
             action = TaskAlarmReceiver.ACTION_FIRE_ALARM
             putExtra(EXTRA_TASK_ID, BEDTIME_ALARM_ID.toLong())
-            putExtra(EXTRA_TASK_TITLE, "🌙 BedTime — 22:00")
-            putExtra(EXTRA_TASK_TIME, "22:00")
+            putExtra(EXTRA_TASK_TITLE, "🌙 BedTime — 22:30")
+            putExtra(EXTRA_TASK_TIME, "22:30")
             putExtra(EXTRA_TASK_MODE, "BEDTIME")
             putExtra(EXTRA_TASK_DURATION_MINUTES, 0)
             putExtra(EXTRA_IS_DAILY, true)
