@@ -8,6 +8,7 @@ import com.example.nyirabyolife.data.model.FocusSession
 import com.example.nyirabyolife.data.model.GratitudeEntry
 import com.example.nyirabyolife.data.model.Mission
 import com.example.nyirabyolife.data.model.PrayerItem
+import com.example.nyirabyolife.data.model.TodoItem
 import com.example.nyirabyolife.data.model.UrgeLog
 import com.example.nyirabyolife.data.model.WeeklyPlanTask
 import com.example.nyirabyolife.util.TaskAlarmScheduler
@@ -22,7 +23,7 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
 
     companion object {
         const val DATABASE_NAME = "nyirabyo_life.db"
-        const val DATABASE_VERSION = 4
+        const val DATABASE_VERSION = 5
 
         @Volatile
         private var instance: NyirabyoDbHelper? = null
@@ -47,6 +48,24 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
         try { db.execSQL("ALTER TABLE missions ADD COLUMN time_minute INTEGER NOT NULL DEFAULT 0") } catch (_: Exception) {}
         try { db.execSQL("ALTER TABLE missions ADD COLUMN task_mode TEXT DEFAULT 'NORMAL'") } catch (_: Exception) {}
         try { db.execSQL("ALTER TABLE missions ADD COLUMN duration_minutes INTEGER DEFAULT 60") } catch (_: Exception) {}
+        try {
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS todos (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    is_completed INTEGER NOT NULL DEFAULT 0,
+                    category TEXT NOT NULL DEFAULT 'GENERAL',
+                    note TEXT DEFAULT '',
+                    created_at INTEGER NOT NULL,
+                    completed_at INTEGER DEFAULT 0
+                )
+            """.trimIndent())
+        } catch (_: Exception) {}
+        // Financial tracking columns (added in DB version 5)
+        try { db.execSQL("ALTER TABLE todos ADD COLUMN planned_price REAL DEFAULT 0.0") } catch (_: Exception) {}
+        try { db.execSQL("ALTER TABLE todos ADD COLUMN actual_price REAL DEFAULT 0.0") } catch (_: Exception) {}
+        try { db.execSQL("ALTER TABLE todos ADD COLUMN quantity INTEGER DEFAULT 1") } catch (_: Exception) {}
+        try { db.execSQL("ALTER TABLE todos ADD COLUMN currency TEXT DEFAULT 'RWF'") } catch (_: Exception) {}
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -118,6 +137,22 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
                 task_mode TEXT DEFAULT 'NORMAL',
                 is_daily INTEGER DEFAULT 0,
                 duration_minutes INTEGER DEFAULT 60
+            )
+        """.trimIndent())
+
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS todos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                is_completed INTEGER NOT NULL DEFAULT 0,
+                category TEXT NOT NULL DEFAULT 'GENERAL',
+                note TEXT DEFAULT '',
+                created_at INTEGER NOT NULL,
+                completed_at INTEGER DEFAULT 0,
+                planned_price REAL DEFAULT 0.0,
+                actual_price REAL DEFAULT 0.0,
+                quantity INTEGER DEFAULT 1,
+                currency TEXT DEFAULT 'RWF'
             )
         """.trimIndent())
     }
@@ -913,6 +948,162 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
 
         defaults.forEach { addWeeklyTask(it) }
         return getWeeklyTasksForWeek(weekOfYear, year)
+    }
+
+    // --- TODO ITEMS (FLEXIBLE UNTIMED LISTS, MARKET & ACHIEVEMENTS) ---
+    fun getAllTodos(categoryFilter: String? = null): List<TodoItem> {
+        val list = mutableListOf<TodoItem>()
+        val db = readableDatabase
+        val selection = if (categoryFilter != null && categoryFilter != "ALL") "category = ?" else null
+        val selectionArgs = if (categoryFilter != null && categoryFilter != "ALL") arrayOf(categoryFilter) else null
+        val cursor = db.query(
+            "todos",
+            null,
+            selection,
+            selectionArgs,
+            null,
+            null,
+            "is_completed ASC, created_at DESC"
+        )
+        cursor.use {
+            while (it.moveToNext()) {
+                list.add(cursorToTodoItem(it))
+            }
+        }
+        return list
+    }
+
+    fun addTodo(todo: TodoItem): Long {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put("title", todo.title)
+            put("is_completed", if (todo.isCompleted) 1 else 0)
+            put("category", todo.category.uppercase())
+            put("note", todo.note)
+            put("created_at", todo.createdAt)
+            put("completed_at", todo.completedAt)
+            put("planned_price", todo.plannedPrice)
+            put("actual_price", todo.actualPrice)
+            put("quantity", todo.quantity)
+            put("currency", todo.currency)
+        }
+        return db.insert("todos", null, values)
+    }
+
+    fun updateTodo(todo: TodoItem) {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put("title", todo.title)
+            put("is_completed", if (todo.isCompleted) 1 else 0)
+            put("category", todo.category.uppercase())
+            put("note", todo.note)
+            put("completed_at", todo.completedAt)
+            put("planned_price", todo.plannedPrice)
+            put("actual_price", todo.actualPrice)
+            put("quantity", todo.quantity)
+            put("currency", todo.currency)
+        }
+        db.update("todos", values, "id = ?", arrayOf(todo.id.toString()))
+    }
+
+    fun updateTodoStatus(id: Long, isCompleted: Boolean) {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put("is_completed", if (isCompleted) 1 else 0)
+            put("completed_at", if (isCompleted) System.currentTimeMillis() else 0L)
+        }
+        db.update("todos", values, "id = ?", arrayOf(id.toString()))
+    }
+
+    fun deleteTodo(id: Long) {
+        writableDatabase.delete("todos", "id = ?", arrayOf(id.toString()))
+    }
+
+    fun clearCompletedTodos() {
+        writableDatabase.delete("todos", "is_completed = 1", null)
+    }
+
+    fun getTodoStats(): Pair<Int, Int> {
+        val db = readableDatabase
+        var total = 0
+        var completed = 0
+        val cursor = db.rawQuery("SELECT is_completed, COUNT(*) FROM todos GROUP BY is_completed", null)
+        cursor.use {
+            while (it.moveToNext()) {
+                val isComp = it.getInt(0) == 1
+                val count = it.getInt(1)
+                total += count
+                if (isComp) completed += count
+            }
+        }
+        return Pair(completed, total)
+    }
+
+    private fun cursorToTodoItem(cursor: android.database.Cursor): TodoItem {
+        val id = cursor.getLong(cursor.getColumnIndexOrThrow("id"))
+        val title = cursor.getString(cursor.getColumnIndexOrThrow("title"))
+        val isCompleted = cursor.getInt(cursor.getColumnIndexOrThrow("is_completed")) == 1
+        val catIdx = cursor.getColumnIndex("category")
+        val category = if (catIdx != -1) cursor.getString(catIdx) ?: "GENERAL" else "GENERAL"
+        val noteIdx = cursor.getColumnIndex("note")
+        val note = if (noteIdx != -1) cursor.getString(noteIdx) ?: "" else ""
+        val crIdx = cursor.getColumnIndex("created_at")
+        val createdAt = if (crIdx != -1) cursor.getLong(crIdx) else System.currentTimeMillis()
+        val cpIdx = cursor.getColumnIndex("completed_at")
+        val completedAt = if (cpIdx != -1) cursor.getLong(cpIdx) else 0L
+        val ppIdx = cursor.getColumnIndex("planned_price")
+        val plannedPrice = if (ppIdx != -1) cursor.getDouble(ppIdx) else 0.0
+        val apIdx = cursor.getColumnIndex("actual_price")
+        val actualPrice = if (apIdx != -1) cursor.getDouble(apIdx) else 0.0
+        val qtyIdx = cursor.getColumnIndex("quantity")
+        val quantity = if (qtyIdx != -1) cursor.getInt(qtyIdx) else 1
+        val currIdx = cursor.getColumnIndex("currency")
+        val currency = if (currIdx != -1) cursor.getString(currIdx) ?: "RWF" else "RWF"
+
+        return TodoItem(
+            id = id,
+            title = title,
+            isCompleted = isCompleted,
+            category = category,
+            note = note,
+            createdAt = createdAt,
+            completedAt = completedAt,
+            plannedPrice = plannedPrice,
+            actualPrice = actualPrice,
+            quantity = quantity.coerceAtLeast(1),
+            currency = currency
+        )
+    }
+
+    /** Returns financial summary for MARKET items (or any category with price data) */
+    fun getMarketBudgetSummary(categoryFilter: String? = "MARKET"): FinancialSummary {
+        val todos = getAllTodos(categoryFilter)
+        val priced = todos.filter { it.hasFinancialData }
+        val totalBudget = priced.sumOf { it.totalPlanned }
+        val totalSpent = priced.filter { it.actualPrice > 0.0 }.sumOf { it.totalActual }
+        val totalSaved = priced.filter { it.hasSavings }.sumOf { it.priceDifference }
+        val totalOverspent = priced.filter { it.isOverBudget }.sumOf { -it.priceDifference }
+        val currency = priced.firstOrNull()?.currency ?: "RWF"
+        return FinancialSummary(
+            totalBudget = totalBudget,
+            totalActualSpent = totalSpent,
+            totalSaved = totalSaved,
+            totalOverspent = totalOverspent,
+            itemCount = priced.size,
+            currency = currency
+        )
+    }
+
+    data class FinancialSummary(
+        val totalBudget: Double,
+        val totalActualSpent: Double,
+        val totalSaved: Double,
+        val totalOverspent: Double,
+        val itemCount: Int,
+        val currency: String
+    ) {
+        val netResult: Double get() = totalSaved - totalOverspent
+        val isUnderBudget: Boolean get() = netResult >= 0
     }
 }
 

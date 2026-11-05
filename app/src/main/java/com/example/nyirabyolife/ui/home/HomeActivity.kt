@@ -23,9 +23,12 @@ import com.example.nyirabyolife.data.local.NyirabyoDbHelper
 import com.example.nyirabyolife.data.local.PreferencesManager
 import com.example.nyirabyolife.data.local.ScriptureRepository
 import com.example.nyirabyolife.data.model.Mission
+import com.example.nyirabyolife.data.model.TodoItem
 import com.example.nyirabyolife.databinding.ActivityHomeBinding
+import com.example.nyirabyolife.databinding.ItemHomeTodoBinding
 import com.example.nyirabyolife.databinding.PageHomeDailyBinding
 import com.example.nyirabyolife.databinding.PageHomeSocialBinding
+import com.example.nyirabyolife.databinding.PageHomeTodoBinding
 import com.example.nyirabyolife.databinding.PageHomeToolsBinding
 import com.example.nyirabyolife.security.RecoveryAuthManager
 import com.example.nyirabyolife.ui.drawer.AppDrawerActivity
@@ -52,8 +55,13 @@ class HomeActivity : AppCompatActivity() {
 
     // Page bindings cached for live updates
     private var slideDailyBinding: PageHomeDailyBinding? = null
+    private var slideTodoBinding: PageHomeTodoBinding? = null
     private var slideToolsBinding: PageHomeToolsBinding? = null
     private var slideSocialBinding: PageHomeSocialBinding? = null
+
+    // Todo filtering and category selection state
+    private var currentTodoCategoryFilter: String? = null
+    private var selectedNewTodoCategory: String = "GENERAL"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -118,6 +126,7 @@ class HomeActivity : AppCompatActivity() {
         loadVerseOfTheDay()
         loadMissions()
         loadWeeklyPlans()
+        loadTodos()
         loadFavoriteAppsDock()
         updateEscapeRoomStatus()
         updateSocialLimitsUI()
@@ -127,7 +136,7 @@ class HomeActivity : AppCompatActivity() {
     private fun setupViewPager() {
         val adapter = HomeSlideAdapter()
         binding.homeViewPager.adapter = adapter
-        binding.homeViewPager.offscreenPageLimit = 2 // Keeps all 3 slides active
+        binding.homeViewPager.offscreenPageLimit = 3 // Keeps all 4 slides active
 
         binding.homeViewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
@@ -140,10 +149,11 @@ class HomeActivity : AppCompatActivity() {
         binding.dot1.setOnClickListener { binding.homeViewPager.setCurrentItem(0, true) }
         binding.dot2.setOnClickListener { binding.homeViewPager.setCurrentItem(1, true) }
         binding.dot3.setOnClickListener { binding.homeViewPager.setCurrentItem(2, true) }
+        binding.dot4.setOnClickListener { binding.homeViewPager.setCurrentItem(3, true) }
     }
 
     private fun updateIndicatorDots(position: Int) {
-        val dots = listOf(binding.dot1, binding.dot2, binding.dot3)
+        val dots = listOf(binding.dot1, binding.dot2, binding.dot3, binding.dot4)
         val density = resources.displayMetrics.density
         for (i in dots.indices) {
             val dot = dots[i]
@@ -278,7 +288,20 @@ class HomeActivity : AppCompatActivity() {
             b.progressBarMissions.progressTintList = android.content.res.ColorStateList.valueOf(themeColors.secondaryAccent)
         }
 
-        // 3. Slide 2 (Tools & Habit Windows) Structural Design
+        // 3. Slide 2 (Personal TODO & Goals) Structural Design
+        val td = slideTodoBinding
+        if (td != null) {
+            td.tvTodoHeaderSubtitle.setTextColor(themeColors.primaryAccent)
+            td.tvTodoSummaryTitle.setTextColor(themeColors.primaryAccent)
+            td.cardTodoSummary.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, themeColors, isElevated = false)
+            td.cardTodoInput.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, themeColors, isElevated = true)
+            td.pbTodoProgress.progressTintList = android.content.res.ColorStateList.valueOf(themeColors.primaryAccent)
+            td.btnAddTodo.setColorFilter(themeColors.primaryAccent)
+            updateTodoFilterChips()
+            updateNewTodoCategoryChips()
+        }
+
+        // 4. Slide 3 (Tools & Habit Windows) Structural Design
         val t = slideToolsBinding
         if (t != null) {
             t.btnEscapeRoomBlock.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, themeColors, isElevated = true)
@@ -288,7 +311,7 @@ class HomeActivity : AppCompatActivity() {
             t.btnToolBible.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, themeColors, isElevated = true)
             t.btnManageMyApps.setTextColor(themeColors.primaryAccent)
         }
-        // 4. Slide 3 (Digital Boundaries) Structural Design
+        // 5. Slide 4 (Digital Boundaries) Structural Design
         val s = slideSocialBinding
         if (s != null) {
             s.cardInstagramLimit.background = com.example.nyirabyolife.util.ThemeHelper.createCardDrawable(this, themeColors, isElevated = true)
@@ -602,7 +625,569 @@ class HomeActivity : AppCompatActivity() {
             .show()
     }
 
-    // --- SLIDE 2: TOOLS & DISCIPLINE ---
+    // --- SLIDE 2: PERSONAL TODO & ACHIEVEMENT TRACKER ---
+    private fun bindSlideTodo(todoBinding: PageHomeTodoBinding) {
+        slideTodoBinding = todoBinding
+        applyThemeColors()
+
+        // Quick add button
+        todoBinding.btnAddTodo.setOnClickListener {
+            addNewTodoFromInput()
+        }
+
+        // IME action on edit text
+        todoBinding.etTodoTitle.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE ||
+                actionId == android.view.inputmethod.EditorInfo.IME_ACTION_GO) {
+                addNewTodoFromInput()
+                true
+            } else {
+                false
+            }
+        }
+
+        // Category selection chips for adding items
+        todoBinding.chipCategoryGeneral.setOnClickListener {
+            selectedNewTodoCategory = "GENERAL"
+            updateNewTodoCategoryChips()
+        }
+        todoBinding.chipCategoryMarket.setOnClickListener {
+            selectedNewTodoCategory = "MARKET"
+            updateNewTodoCategoryChips()
+        }
+        todoBinding.chipCategoryProject.setOnClickListener {
+            selectedNewTodoCategory = "PROJECT"
+            updateNewTodoCategoryChips()
+        }
+        todoBinding.chipCategoryGoal.setOnClickListener {
+            selectedNewTodoCategory = "GOAL"
+            updateNewTodoCategoryChips()
+        }
+        updateNewTodoCategoryChips()
+
+        // Filter chips
+        todoBinding.filterAll.setOnClickListener {
+            currentTodoCategoryFilter = null
+            updateTodoFilterChips()
+            loadTodos()
+        }
+        todoBinding.filterMarket.setOnClickListener {
+            currentTodoCategoryFilter = "MARKET"
+            updateTodoFilterChips()
+            loadTodos()
+        }
+        todoBinding.filterProject.setOnClickListener {
+            currentTodoCategoryFilter = "PROJECT"
+            updateTodoFilterChips()
+            loadTodos()
+        }
+        todoBinding.filterGoal.setOnClickListener {
+            currentTodoCategoryFilter = "GOAL"
+            updateTodoFilterChips()
+            loadTodos()
+        }
+        todoBinding.filterGeneral.setOnClickListener {
+            currentTodoCategoryFilter = "GENERAL"
+            updateTodoFilterChips()
+            loadTodos()
+        }
+        updateTodoFilterChips()
+
+        // Clear completed button
+        todoBinding.btnClearCompletedTodos.setOnClickListener {
+            val stats = dbHelper.getTodoStats()
+            if (stats.first == 0) {
+                Toast.makeText(this, "No completed items to clear.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
+                .setTitle("Clear Completed Todos")
+                .setMessage("Remove all ${stats.first} completed items from your list?")
+                .setPositiveButton("Clear") { _, _ ->
+                    dbHelper.clearCompletedTodos()
+                    loadTodos()
+                    Toast.makeText(this, "Cleared completed items.", Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+
+        // Currency tap to change
+        todoBinding.tvMarketCurrency.setOnClickListener {
+            showCurrencyPicker()
+        }
+
+        loadTodos()
+    }
+
+    private fun showCurrencyPicker() {
+        val currencies = arrayOf("RWF 🇷🇼", "USD 🇺🇸", "EUR 🇪🇺", "KES 🇰🇪", "UGX 🇺🇬", "TZS 🇹🇿")
+        val currencyCodes = arrayOf("RWF", "USD", "EUR", "KES", "UGX", "TZS")
+        val currentCurrency = slideTodoBinding?.tvMarketCurrency?.text?.toString() ?: "RWF"
+        val currentIdx = currencyCodes.indexOfFirst { it == currentCurrency }.coerceAtLeast(0)
+
+        AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
+            .setTitle("Select Currency")
+            .setSingleChoiceItems(currencies, currentIdx) { dialog, which ->
+                val selected = currencyCodes[which]
+                slideTodoBinding?.tvMarketCurrency?.text = selected
+                dialog.dismiss()
+                loadTodos()
+            }
+            .show()
+    }
+
+    private fun addNewTodoFromInput() {
+        val b = slideTodoBinding ?: return
+        val title = b.etTodoTitle.text.toString().trim()
+        if (title.isEmpty()) {
+            Toast.makeText(this, "Please enter a todo or item name.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val currency = b.tvMarketCurrency.text?.toString()?.takeIf { it.isNotBlank() } ?: "RWF"
+
+        val todo = TodoItem(
+            title = title,
+            category = selectedNewTodoCategory,
+            isCompleted = false,
+            currency = currency
+        )
+        dbHelper.addTodo(todo)
+        b.etTodoTitle.text.clear()
+
+        // Hide soft keyboard
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+        imm?.hideSoftInputFromWindow(b.etTodoTitle.windowToken, 0)
+
+        loadTodos()
+    }
+
+    private fun updateNewTodoCategoryChips() {
+        val b = slideTodoBinding ?: return
+        val themeColors = com.example.nyirabyolife.util.ThemeHelper.getActiveThemeColors(this)
+
+        val chips = listOf(
+            Triple(b.chipCategoryGeneral, "GENERAL", "📋 Todo"),
+            Triple(b.chipCategoryMarket, "MARKET", "🛒 Market"),
+            Triple(b.chipCategoryProject, "PROJECT", "🎨 Project"),
+            Triple(b.chipCategoryGoal, "GOAL", "🎯 Goal")
+        )
+
+        for ((chip, cat, _) in chips) {
+            if (cat.equals(selectedNewTodoCategory, ignoreCase = true)) {
+                chip.setTextColor(themeColors.primaryAccent)
+                chip.setBackgroundResource(R.drawable.pill_background)
+            } else {
+                chip.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+                chip.setBackgroundResource(R.drawable.card_background)
+            }
+        }
+    }
+
+    private fun updateTodoFilterChips() {
+        val b = slideTodoBinding ?: return
+        val themeColors = com.example.nyirabyolife.util.ThemeHelper.getActiveThemeColors(this)
+
+        val filters = listOf(
+            Pair(b.filterAll, null),
+            Pair(b.filterMarket, "MARKET"),
+            Pair(b.filterProject, "PROJECT"),
+            Pair(b.filterGoal, "GOAL"),
+            Pair(b.filterGeneral, "GENERAL")
+        )
+
+        for ((filterView, cat) in filters) {
+            val isSelected = (cat == null && currentTodoCategoryFilter == null) ||
+                             (cat != null && cat.equals(currentTodoCategoryFilter, ignoreCase = true))
+            if (isSelected) {
+                filterView.setTextColor(themeColors.primaryAccent)
+                filterView.setBackgroundResource(R.drawable.pill_background)
+            } else {
+                filterView.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+                filterView.setBackgroundResource(R.drawable.card_background)
+            }
+        }
+    }
+
+    private fun formatPrice(amount: Double, currency: String): String {
+        return if (amount == 0.0) "-" else {
+            val formatted = if (amount == kotlin.math.floor(amount)) {
+                android.text.format.Formatter.formatShortFileSize(this, amount.toLong())
+                    .let { "${amount.toLong()}" }
+            } else {
+                "%.0f".format(amount)
+            }
+            "$currency $formatted"
+        }
+    }
+
+    private fun updateMarketBudgetCard(todos: List<com.example.nyirabyolife.data.model.TodoItem>) {
+        val b = slideTodoBinding ?: return
+        val themeColors = com.example.nyirabyolife.util.ThemeHelper.getActiveThemeColors(this)
+        val filter = currentTodoCategoryFilter
+
+        // Show Market Budget card whenever market filter is selected or there are market items with prices
+        val marketItems = if (filter == "MARKET") todos
+                          else dbHelper.getAllTodos("MARKET")
+        val pricedItems = marketItems.filter { it.hasFinancialData }
+
+        val currency = b.tvMarketCurrency.text?.toString()?.takeIf { it.isNotBlank() } ?: "RWF"
+
+        if (pricedItems.isEmpty() && filter != "MARKET") {
+            b.cardMarketBudget.visibility = View.GONE
+            return
+        }
+
+        b.cardMarketBudget.visibility = View.VISIBLE
+
+        val totalBudget = pricedItems.sumOf { it.totalPlanned }
+        val pricedWithActual = pricedItems.filter { it.actualPrice > 0.0 }
+        val totalSpent = pricedWithActual.sumOf { it.totalActual }
+        val totalSaved = pricedItems.filter { it.hasSavings }.sumOf { it.priceDifference }
+        val totalOverspent = pricedItems.filter { it.isOverBudget }.sumOf { -it.priceDifference }
+        val netResult = totalSaved - totalOverspent
+
+        // Budget summary numbers
+        b.tvMarketTotalBudget.text = if (totalBudget > 0) "%.0f".format(totalBudget) else "—"
+        b.tvMarketTotalSpent.text = if (totalSpent > 0) "%.0f".format(totalSpent) else "—"
+
+        if (netResult > 0) {
+            b.tvMarketNetLabel.text = "SAVED 💚"
+            b.tvMarketNetAmount.text = "%.0f".format(netResult)
+            b.tvMarketNetAmount.setTextColor(android.graphics.Color.parseColor("#10B981"))
+        } else if (netResult < 0) {
+            b.tvMarketNetLabel.text = "OVER 🔴"
+            b.tvMarketNetAmount.text = "%.0f".format(-netResult)
+            b.tvMarketNetAmount.setTextColor(android.graphics.Color.parseColor("#F87171"))
+        } else {
+            b.tvMarketNetLabel.text = "BALANCE"
+            b.tvMarketNetAmount.text = "0"
+            b.tvMarketNetAmount.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+        }
+
+        // Budget usage progress bar
+        val budgetLimitStr = b.etTotalBudgetTarget.text?.toString()?.trim()
+        val budgetLimit = budgetLimitStr?.toDoubleOrNull() ?: totalBudget
+        val budgetProgress = if (budgetLimit > 0) ((totalSpent / budgetLimit) * 100).toInt().coerceIn(0, 100) else 0
+        b.pbMarketBudget.progress = budgetProgress
+
+        if (budgetLimit > 0 && totalSpent > 0) {
+            val isOver = totalSpent > budgetLimit
+            b.tvBudgetLimitStatus.visibility = View.VISIBLE
+            if (isOver) {
+                val overAmount = "%.0f".format(totalSpent - budgetLimit)
+                b.tvBudgetLimitStatus.text = "Over by $overAmount ⚠️"
+                b.tvBudgetLimitStatus.setTextColor(android.graphics.Color.parseColor("#F87171"))
+                b.pbMarketBudget.progressTintList =
+                    android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#F87171"))
+            } else {
+                val remaining = "%.0f".format(budgetLimit - totalSpent)
+                b.tvBudgetLimitStatus.text = "$remaining remaining ✓"
+                b.tvBudgetLimitStatus.setTextColor(android.graphics.Color.parseColor("#10B981"))
+                b.pbMarketBudget.progressTintList =
+                    android.content.res.ColorStateList.valueOf(themeColors.primaryAccent)
+            }
+        } else {
+            b.tvBudgetLimitStatus.visibility = View.GONE
+        }
+
+        b.tvMarketCurrency.text = currency
+    }
+
+    private fun loadTodos() {
+        val b = slideTodoBinding ?: return
+        val themeColors = com.example.nyirabyolife.util.ThemeHelper.getActiveThemeColors(this)
+        val todos = dbHelper.getAllTodos(currentTodoCategoryFilter)
+        val (completed, total) = dbHelper.getTodoStats()
+
+        // Update progress summary
+        val percent = if (total > 0) ((completed * 100f) / total).toInt() else 0
+        b.tvTodoProgressStats.text = "$completed of $total achieved ($percent%)"
+        b.pbTodoProgress.progress = percent
+
+        // Update market budget card
+        updateMarketBudgetCard(todos)
+
+        b.layoutTodoList.removeAllViews()
+
+        if (todos.isEmpty()) {
+            b.layoutEmptyTodo.visibility = View.VISIBLE
+            val filterName = when (currentTodoCategoryFilter?.uppercase()) {
+                "MARKET" -> "Market"
+                "PROJECT" -> "Projects"
+                "GOAL" -> "Goals"
+                "GENERAL" -> "Todo"
+                else -> null
+            }
+            b.tvEmptyTodoTitle.text = if (filterName != null) "No items in $filterName" else "No items yet"
+            return
+        }
+
+        b.layoutEmptyTodo.visibility = View.GONE
+
+        val currency = b.tvMarketCurrency.text?.toString()?.takeIf { it.isNotBlank() } ?: "RWF"
+        val inflater = LayoutInflater.from(this)
+        for (todo in todos) {
+            val itemBinding = ItemHomeTodoBinding.inflate(inflater, b.layoutTodoList, false)
+
+            itemBinding.tvTodoTitle.text = todo.title
+            itemBinding.tvTodoCategoryBadge.text = todo.categoryBadgeText
+            itemBinding.tvTodoCategoryBadge.setTextColor(themeColors.primaryAccent)
+
+            // Quantity badge
+            if (todo.quantity > 1) {
+                itemBinding.tvTodoQuantityBadge.text = "×${todo.quantity}"
+                itemBinding.tvTodoQuantityBadge.visibility = View.VISIBLE
+            } else {
+                itemBinding.tvTodoQuantityBadge.visibility = View.GONE
+            }
+
+            if (todo.note.isNotBlank()) {
+                itemBinding.tvTodoNote.text = todo.note
+                itemBinding.tvTodoNote.visibility = View.VISIBLE
+            } else {
+                itemBinding.tvTodoNote.visibility = View.GONE
+            }
+
+            // Financial price row
+            if (todo.hasFinancialData) {
+                itemBinding.layoutPriceRow.visibility = View.VISIBLE
+                val cur = todo.currency.ifBlank { currency }
+
+                itemBinding.tvTodoPlannedPrice.text = if (todo.plannedPrice > 0)
+                    "$cur ${"%.0f".format(todo.plannedPrice)}" else "—"
+
+                itemBinding.tvTodoActualPrice.text = if (todo.actualPrice > 0)
+                    "$cur ${"%.0f".format(todo.actualPrice)}" else "—"
+
+                // Price difference badge
+                when {
+                    todo.hasSavings -> {
+                        itemBinding.tvTodoPriceDiff.visibility = View.VISIBLE
+                        itemBinding.tvTodoPriceDiff.text = "💚 Saved ${"%.0f".format(todo.priceDifference)}"
+                        itemBinding.tvTodoPriceDiff.setTextColor(android.graphics.Color.parseColor("#10B981"))
+                    }
+                    todo.isOverBudget -> {
+                        itemBinding.tvTodoPriceDiff.visibility = View.VISIBLE
+                        itemBinding.tvTodoPriceDiff.text = "🔴 +${"%.0f".format(-todo.priceDifference)} over"
+                        itemBinding.tvTodoPriceDiff.setTextColor(android.graphics.Color.parseColor("#F87171"))
+                    }
+                    else -> itemBinding.tvTodoPriceDiff.visibility = View.GONE
+                }
+            } else {
+                itemBinding.layoutPriceRow.visibility = View.GONE
+            }
+
+            if (todo.isCompleted) {
+                itemBinding.ivTodoCheck.setImageResource(R.drawable.ic_check_circle)
+                itemBinding.ivTodoCheck.setColorFilter(themeColors.primaryAccent)
+                itemBinding.tvTodoTitle.paintFlags = itemBinding.tvTodoTitle.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+                itemBinding.tvTodoTitle.setTextColor(ContextCompat.getColor(this, R.color.text_tertiary))
+            } else {
+                itemBinding.ivTodoCheck.setImageResource(R.drawable.ic_circle_outline)
+                itemBinding.ivTodoCheck.setColorFilter(ContextCompat.getColor(this, R.color.text_tertiary))
+                itemBinding.tvTodoTitle.paintFlags = itemBinding.tvTodoTitle.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
+                itemBinding.tvTodoTitle.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
+            }
+
+            // Toggle completion
+            itemBinding.ivTodoCheck.setOnClickListener {
+                dbHelper.updateTodoStatus(todo.id, !todo.isCompleted)
+                loadTodos()
+            }
+
+            // Quick Delete
+            itemBinding.btnDeleteTodo.setOnClickListener {
+                dbHelper.deleteTodo(todo.id)
+                loadTodos()
+                Toast.makeText(this, "Removed '${todo.title}'", Toast.LENGTH_SHORT).show()
+            }
+
+            // Tap on item to edit (with financial fields)
+            itemBinding.root.setOnClickListener {
+                showEditTodoDialog(todo)
+            }
+
+            b.layoutTodoList.addView(itemBinding.root)
+        }
+    }
+
+    private fun showEditTodoDialog(todo: TodoItem) {
+        val density = resources.displayMetrics.density
+        val p = (18 * density).toInt()
+        val pSm = (10 * density).toInt()
+        val pCard = (12 * density).toInt()
+        val mTop = (10 * density).toInt()
+
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(p, pSm, p, (8 * density).toInt())
+        }
+
+        fun makeEditText(initialValue: String, hintText: String, inputType: Int = android.text.InputType.TYPE_CLASS_TEXT): EditText {
+            return EditText(this).apply {
+                setText(initialValue)
+                hint = hintText
+                this.inputType = inputType
+                setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.text_primary))
+                setHintTextColor(ContextCompat.getColor(this@HomeActivity, R.color.text_tertiary))
+                setBackgroundResource(R.drawable.card_background)
+                setPadding(pCard, pSm, pCard, pSm)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = mTop }
+            }
+        }
+
+        // Title
+        val etTitle = makeEditText(todo.title, "Title / Item name")
+        layout.addView(etTitle)
+
+        // Note
+        val etNote = makeEditText(todo.note, "Notes, details, or specs (optional)")
+        layout.addView(etNote)
+
+        // Category picker
+        val categories = listOf("GENERAL", "MARKET", "PROJECT", "GOAL")
+        val categoryLabels = arrayOf("📋 Todo / General", "🛒 Market / Shopping", "🎨 Project / Work", "🎯 Goal / Achievement")
+        var selectedCatIndex = categories.indexOfFirst { it.equals(todo.category, ignoreCase = true) }.coerceAtLeast(0)
+
+        val catButton = TextView(this).apply {
+            text = "Category: ${categoryLabels[selectedCatIndex]}"
+            setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.gold_primary))
+            textSize = 12f
+            setPadding(pCard, pSm, pCard, pSm)
+            setBackgroundResource(R.drawable.pill_background)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = mTop }
+            setOnClickListener {
+                AlertDialog.Builder(this@HomeActivity, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
+                    .setTitle("Select Category")
+                    .setSingleChoiceItems(categoryLabels, selectedCatIndex) { d, which ->
+                        selectedCatIndex = which
+                        this.text = "Category: ${categoryLabels[which]}"
+                        d.dismiss()
+                    }
+                    .show()
+            }
+        }
+        layout.addView(catButton)
+
+        // ── Financial fields section ──
+        val divLabel = TextView(this).apply {
+            text = "── PRICE & BUDGET TRACKING (optional) ──"
+            setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.text_tertiary))
+            textSize = 10f
+            gravity = android.view.Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = (14 * density).toInt(); bottomMargin = (4 * density).toInt() }
+        }
+        layout.addView(divLabel)
+
+        // Budget (planned price per unit)
+        val etPlanned = makeEditText(
+            if (todo.plannedPrice > 0) "%.0f".format(todo.plannedPrice) else "",
+            "Budget / Planned price per unit",
+            android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+        )
+        layout.addView(etPlanned)
+
+        // Actual price found / paid
+        val etActual = makeEditText(
+            if (todo.actualPrice > 0) "%.0f".format(todo.actualPrice) else "",
+            "Actual price found / paid",
+            android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+        )
+        layout.addView(etActual)
+
+        // Quantity
+        val etQty = makeEditText(
+            if (todo.quantity > 1) todo.quantity.toString() else "",
+            "Quantity (default: 1)",
+            android.text.InputType.TYPE_CLASS_NUMBER
+        )
+        layout.addView(etQty)
+
+        // Live savings preview hint
+        val tvSavingsPreview = TextView(this).apply {
+            setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.text_secondary))
+            textSize = 11f
+            gravity = android.view.Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = (8 * density).toInt() }
+        }
+        layout.addView(tvSavingsPreview)
+
+        // Live preview calculation as user types
+        val updatePreview = {
+            val planned = etPlanned.text.toString().toDoubleOrNull() ?: 0.0
+            val actual = etActual.text.toString().toDoubleOrNull() ?: 0.0
+            val qty = etQty.text.toString().toIntOrNull()?.coerceAtLeast(1) ?: 1
+            val cur = todo.currency.ifBlank { "RWF" }
+            if (planned > 0 && actual > 0) {
+                val diff = (planned - actual) * qty
+                if (diff > 0) {
+                    tvSavingsPreview.text = "💚 You save $cur ${"%.0f".format(diff)} on this item"
+                    tvSavingsPreview.setTextColor(android.graphics.Color.parseColor("#10B981"))
+                } else if (diff < 0) {
+                    tvSavingsPreview.text = "🔴 $cur ${"%.0f".format(-diff)} over budget on this item"
+                    tvSavingsPreview.setTextColor(android.graphics.Color.parseColor("#F87171"))
+                } else {
+                    tvSavingsPreview.text = "✓ Exactly on budget"
+                    tvSavingsPreview.setTextColor(ContextCompat.getColor(this@HomeActivity, R.color.text_secondary))
+                }
+            } else {
+                tvSavingsPreview.text = ""
+            }
+        }
+
+        val watcher = object : android.text.TextWatcher {
+            override fun afterTextChanged(s: android.text.Editable?) { updatePreview() }
+            override fun beforeTextChanged(s: CharSequence?, st: Int, c: Int, a: Int) {}
+            override fun onTextChanged(s: CharSequence?, st: Int, b: Int, c: Int) {}
+        }
+        etPlanned.addTextChangedListener(watcher)
+        etActual.addTextChangedListener(watcher)
+        etQty.addTextChangedListener(watcher)
+        updatePreview()
+
+        AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
+            .setTitle("Edit Item")
+            .setView(layout)
+            .setPositiveButton("Save") { _, _ ->
+                val newTitle = etTitle.text.toString().trim()
+                if (newTitle.isNotEmpty()) {
+                    val updated = todo.copy(
+                        title = newTitle,
+                        note = etNote.text.toString().trim(),
+                        category = categories[selectedCatIndex],
+                        plannedPrice = etPlanned.text.toString().toDoubleOrNull() ?: 0.0,
+                        actualPrice = etActual.text.toString().toDoubleOrNull() ?: 0.0,
+                        quantity = etQty.text.toString().toIntOrNull()?.coerceAtLeast(1) ?: 1
+                    )
+                    dbHelper.updateTodo(updated)
+                    loadTodos()
+                    Toast.makeText(this, "Item updated.", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNeutralButton("Delete") { _, _ ->
+                dbHelper.deleteTodo(todo.id)
+                loadTodos()
+                Toast.makeText(this, "Item deleted.", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    // --- SLIDE 3: TOOLS & DISCIPLINE ---
     private fun bindSlideTools(toolsBinding: PageHomeToolsBinding) {
         slideToolsBinding = toolsBinding
         applyThemeColors()
@@ -986,7 +1571,7 @@ class HomeActivity : AppCompatActivity() {
     // --- VIEWPAGER2 ADAPTER ---
     private inner class HomeSlideAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-        override fun getItemCount(): Int = 3
+        override fun getItemCount(): Int = 4
 
         override fun getItemViewType(position: Int): Int = position
 
@@ -998,6 +1583,10 @@ class HomeActivity : AppCompatActivity() {
                     DailyViewHolder(dailyBinding)
                 }
                 1 -> {
+                    val todoBinding = PageHomeTodoBinding.inflate(inflater, parent, false)
+                    TodoViewHolder(todoBinding)
+                }
+                2 -> {
                     val toolsBinding = PageHomeToolsBinding.inflate(inflater, parent, false)
                     ToolsViewHolder(toolsBinding)
                 }
@@ -1011,6 +1600,7 @@ class HomeActivity : AppCompatActivity() {
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
             when (holder) {
                 is DailyViewHolder -> bindSlideDaily(holder.binding)
+                is TodoViewHolder -> bindSlideTodo(holder.binding)
                 is ToolsViewHolder -> bindSlideTools(holder.binding)
                 is SocialViewHolder -> bindSlideSocial(holder.binding)
             }
@@ -1018,6 +1608,7 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private class DailyViewHolder(val binding: PageHomeDailyBinding) : RecyclerView.ViewHolder(binding.root)
+    private class TodoViewHolder(val binding: PageHomeTodoBinding) : RecyclerView.ViewHolder(binding.root)
     private class ToolsViewHolder(val binding: PageHomeToolsBinding) : RecyclerView.ViewHolder(binding.root)
     private class SocialViewHolder(val binding: PageHomeSocialBinding) : RecyclerView.ViewHolder(binding.root)
 }

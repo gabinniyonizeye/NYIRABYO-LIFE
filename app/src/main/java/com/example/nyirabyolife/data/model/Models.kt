@@ -156,3 +156,45 @@ data class AppItem(
     var icon: Drawable? = null,
     var isFavorite: Boolean = false
 )
+
+data class TodoItem(
+    val id: Long = 0,
+    val title: String,
+    val isCompleted: Boolean = false,
+    val category: String = "GENERAL", // "GENERAL", "MARKET", "PROJECT", "GOAL"
+    val note: String = "",
+    val createdAt: Long = System.currentTimeMillis(),
+    val completedAt: Long = 0L,
+    // Financial tracking fields (for MARKET, PROJECT, GOAL budget tracking)
+    val plannedPrice: Double = 0.0,  // budget / expected price
+    val actualPrice: Double = 0.0,   // real price found / spent
+    val quantity: Int = 1,           // quantity / units
+    val currency: String = "RWF"     // currency symbol (RWF, USD, etc.)
+) {
+    val categoryBadgeText: String
+        get() = when (category.uppercase()) {
+            "MARKET", "SHOPPING" -> "🛒 Market"
+            "PROJECT", "GRAPHICS", "WORK" -> "🎨 Project"
+            "GOAL", "ACHIEVEMENT" -> "🎯 Goal"
+            else -> "📋 Todo"
+        }
+
+    /** True if this item has any financial data entered */
+    val hasFinancialData: Boolean
+        get() = plannedPrice > 0.0 || actualPrice > 0.0
+
+    /** Total planned cost (planned × qty) */
+    val totalPlanned: Double get() = plannedPrice * quantity
+
+    /** Total actual cost (actual × qty) */
+    val totalActual: Double get() = if (actualPrice > 0.0) actualPrice * quantity else totalPlanned
+
+    /** Positive = money saved, Negative = money lost/overspent */
+    val priceDifference: Double get() = totalPlanned - totalActual
+
+    /** Whether this item saved money (actual < planned, both set) */
+    val hasSavings: Boolean get() = plannedPrice > 0.0 && actualPrice > 0.0 && actualPrice < plannedPrice
+
+    /** Whether this item cost more than planned */
+    val isOverBudget: Boolean get() = plannedPrice > 0.0 && actualPrice > 0.0 && actualPrice > plannedPrice
+}
