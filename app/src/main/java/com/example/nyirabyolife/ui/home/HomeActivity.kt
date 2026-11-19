@@ -87,8 +87,9 @@ class HomeActivity : AppCompatActivity() {
             prefs.setTasksCustomizedByUser(true)
         }
 
-        // Purge any lingering ghost alarms so that user has full control of alarms
+        // Purge any lingering ghost alarms so that user has full control of alarms, and reschedule only user-defined active alarms
         com.example.nyirabyolife.util.TaskAlarmScheduler.purgeAllGhostAlarms(this)
+        com.example.nyirabyolife.util.TaskAlarmScheduler.rescheduleAllActiveAlarms(this)
 
         recoveryAuthManager = RecoveryAuthManager(
             activity = this,

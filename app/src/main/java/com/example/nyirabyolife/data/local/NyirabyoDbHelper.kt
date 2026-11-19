@@ -265,61 +265,32 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
     }
 
     fun ensureFoundationTasksForDay(dayOfWeek: Int, weekOfYear: Int, year: Int) {
-        if (PreferencesManager.getInstance(context).isTasksCustomizedByUser()) return
+        // Disabled: User has full autonomous control over their own schedule and alarms.
+    }
 
-        val tasks = getWeeklyTasksForDay(dayOfWeek, weekOfYear, year)
-        val titles = tasks.map { it.title.trim().lowercase() }.toSet()
+    /**
+     * Purges stale past-week tasks and any legacy auto-seeded ghost alarms (Wake Up at 5:30 AM,
+     * BedTime 22:30, BED TIME) from SQLite, leaving only user-defined tasks.
+     */
+    fun purgeStaleAndLegacyGhostTasks() {
+        val db = writableDatabase
+        val cal = Calendar.getInstance()
+        val currentWeek = cal.get(Calendar.WEEK_OF_YEAR)
+        val currentYear = cal.get(Calendar.YEAR)
 
-        if (!titles.any { it.contains("wake up") }) {
-            addWeeklyTask(
-                WeeklyPlanTask(
-                    title = "Wake Up at 5:30 AM",
-                    dayOfWeek = dayOfWeek,
-                    timeHour = 5,
-                    timeMinute = 30,
-                    isAlarmEnabled = true,
-                    weekOfYear = weekOfYear,
-                    year = year,
-                    taskMode = "NORMAL",
-                    isDaily = true,
-                    durationMinutes = 0
-                )
-            )
-        }
+        // 1. Delete all tasks from past weeks
+        db.delete(
+            "weekly_plans",
+            "(year < ?) OR (year = ? AND week_of_year < ?)",
+            arrayOf(currentYear.toString(), currentYear.toString(), currentWeek.toString())
+        )
 
-        if (!titles.any { it.contains("pray") || it.contains("scripture") }) {
-            addWeeklyTask(
-                WeeklyPlanTask(
-                    title = "Pray & Scripture at 5:45",
-                    dayOfWeek = dayOfWeek,
-                    timeHour = 5,
-                    timeMinute = 45,
-                    isAlarmEnabled = true,
-                    weekOfYear = weekOfYear,
-                    year = year,
-                    taskMode = "MEDITATION",
-                    isDaily = true,
-                    durationMinutes = 30
-                )
-            )
-        }
-
-        if (!titles.any { it.contains("bedtime") }) {
-            addWeeklyTask(
-                WeeklyPlanTask(
-                    title = "BedTime 22:30",
-                    dayOfWeek = dayOfWeek,
-                    timeHour = 22,
-                    timeMinute = 30,
-                    isAlarmEnabled = true,
-                    weekOfYear = weekOfYear,
-                    year = year,
-                    taskMode = "BEDTIME",
-                    isDaily = true,
-                    durationMinutes = 0
-                )
-            )
-        }
+        // 2. Delete auto-seeded ghost tasks that were injected into SQLite
+        db.delete(
+            "weekly_plans",
+            "LOWER(title) LIKE '%wake up at 5:30%' OR LOWER(title) LIKE '%bedtime 22:30%' OR LOWER(title) = 'bed time'",
+            null
+        )
     }
 
     fun getSynchronizedDailyMissions(date: String, dayOfWeek: Int, weekOfYear: Int, year: Int): List<Mission> {
@@ -640,12 +611,18 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
 
     // --- WEEKLY PLANS WITH STRONG ALARM COLLABORATION ---
 
-    /** Returns ALL weekly tasks across every week/year — needed to reschedule daily alarms after boot. */
+    /** Returns active weekly tasks for current or future weeks — never past weeks. */
     fun getAllWeeklyTasks(): List<WeeklyPlanTask> {
+        val cal = Calendar.getInstance()
+        val currentWeek = cal.get(Calendar.WEEK_OF_YEAR)
+        val currentYear = cal.get(Calendar.YEAR)
         val list = mutableListOf<WeeklyPlanTask>()
         val db = readableDatabase
         val cursor = db.query(
-            "weekly_plans", null, null, null, null, null,
+            "weekly_plans", null,
+            "(year > ?) OR (year = ? AND week_of_year >= ?)",
+            arrayOf(currentYear.toString(), currentYear.toString(), currentWeek.toString()),
+            null, null,
             "day_of_week ASC, time_hour ASC, time_minute ASC"
         )
         cursor.use {

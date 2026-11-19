@@ -92,16 +92,11 @@ object TaskAlarmScheduler {
         showPendingIntent: PendingIntent
     ) {
         try {
-            alarmManager.setAlarmClock(
-                AlarmManager.AlarmClockInfo(triggerTime, showPendingIntent),
-                pendingIntent
-            )
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
         } catch (_: SecurityException) {
             try {
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
-            } catch (_: Exception) {
                 alarmManager.set(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
-            }
+            } catch (_: Exception) {}
         }
     }
 
@@ -151,6 +146,8 @@ object TaskAlarmScheduler {
         cancelPermanentAlarms(context)
 
         val db = NyirabyoDbHelper.getInstance(context)
+        db.purgeStaleAndLegacyGhostTasks()
+
         val validTasks = db.getAllWeeklyTasks()
         val activeAlarmIds = validTasks
             .filter { it.isAlarmEnabled && !it.isCompleted }
@@ -162,14 +159,13 @@ object TaskAlarmScheduler {
             cancelTaskAlarm(context, it.id)
         }
 
-        // Search for any orphaned PendingIntents up to recent ID bounds
-        val maxExistingId = validTasks.maxOfOrNull { it.id.toInt() } ?: 0
-        val scanLimit = (maxExistingId + 300).coerceAtLeast(600)
-
+        // Broad sweep to cancel any orphaned PendingIntents up to ID 1000
         val intent = Intent(context, TaskAlarmReceiver::class.java).apply {
             action = TaskAlarmReceiver.ACTION_FIRE_ALARM
         }
-        for (reqCode in 1..scanLimit) {
+        val showIntent = Intent(context, com.example.nyirabyolife.ui.home.HomeActivity::class.java)
+
+        for (reqCode in 1..1000) {
             if (reqCode !in activeAlarmIds) {
                 try {
                     val existingBroadcast = PendingIntent.getBroadcast(
@@ -181,6 +177,19 @@ object TaskAlarmScheduler {
                     if (existingBroadcast != null) {
                         alarmManager.cancel(existingBroadcast)
                         existingBroadcast.cancel()
+                    }
+                } catch (_: Exception) {}
+
+                try {
+                    val existingShow = PendingIntent.getActivity(
+                        context,
+                        reqCode,
+                        showIntent,
+                        PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    if (existingShow != null) {
+                        alarmManager.cancel(existingShow)
+                        existingShow.cancel()
                     }
                 } catch (_: Exception) {}
             }
