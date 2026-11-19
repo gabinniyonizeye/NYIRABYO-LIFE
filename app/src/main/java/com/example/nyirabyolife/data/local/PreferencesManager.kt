@@ -375,8 +375,8 @@ class PreferencesManager(context: Context) {
         val hour = cal.get(Calendar.HOUR_OF_DAY)
         val minute = cal.get(Calendar.MINUTE)
         val currentMinutes = hour * 60 + minute
-        // 22:30 (10:30 PM) until 05:30 (5:30 AM) = Exactly 7 hours of sleep
-        return currentMinutes >= (22 * 60 + 30) || currentMinutes < (5 * 60 + 30)
+        // Total Lockdown: 22:00 (10:00 PM) until 05:00 (5:00 AM)
+        return currentMinutes >= (22 * 60) || currentMinutes < (5 * 60)
     }
 
     fun isSocialMediaWindowOpen(): Boolean {

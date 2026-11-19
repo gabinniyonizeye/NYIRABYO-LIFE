@@ -126,6 +126,28 @@ class NyirabyoCoreTest {
     }
 
     @Test
+    fun bedtimeLockdown_22to5WindowCalculation() {
+        fun isBedtime(hour: Int, min: Int): Boolean {
+            val current = hour * 60 + min
+            return current >= (22 * 60) || current < (5 * 60)
+        }
+
+        // Active bedtime lockdown (22:00 to 05:00)
+        assertTrue(isBedtime(22, 0))   // 22:00 sharp starts
+        assertTrue(isBedtime(22, 30))  // 22:30 active
+        assertTrue(isBedtime(23, 59))  // 23:59 active
+        assertTrue(isBedtime(0, 0))    // midnight active
+        assertTrue(isBedtime(2, 30))   // 02:30 active
+        assertTrue(isBedtime(4, 59))   // 04:59 active
+
+        // Released at 05:00 AM sharp
+        assertFalse(isBedtime(5, 0))   // 05:00 ends lockdown
+        assertFalse(isBedtime(5, 30))  // 05:30 free
+        assertFalse(isBedtime(12, 0))  // noon free
+        assertFalse(isBedtime(21, 59)) // 21:59 free
+    }
+
+    @Test
     fun todoItem_groupingAndBadges() {
         val todoWithGroup = com.example.nyirabyolife.data.model.TodoItem(
             title = "buying chairs",

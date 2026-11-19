@@ -65,21 +65,7 @@ object HabitationReminderManager {
         if (activity.isFinishing || activity.isDestroyed) return
         val prefs = PreferencesManager.getInstance(activity)
 
-        val cal = Calendar.getInstance()
-        val hour = cal.get(Calendar.HOUR_OF_DAY)
-        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-
-        // 1. Digital Sunset / Bedtime Approaching Check (Between 21:00 and 22:00)
-        if (hour in 21..21) {
-            val lastWindDown = prefs.getLastWindDownDate()
-            if (lastWindDown != todayStr) {
-                prefs.setLastWindDownDate(todayStr)
-                showBedtimeApproachingPopup(activity)
-                return
-            }
-        }
-
-        // 2. Periodic Mindful Habitation Check (Every 3 hours)
+        // Periodic Mindful Habitation Check (Every 3 hours)
         val now = System.currentTimeMillis()
         val lastReminder = prefs.getLastReminderTime()
         val intervalMillis = 3 * 60 * 60 * 1000L // 3 Hours
@@ -105,14 +91,6 @@ object HabitationReminderManager {
             .create()
 
         dialog.show()
-    }
-
-    private fun showBedtimeApproachingPopup(activity: Activity) {
-        AlertDialog.Builder(activity, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
-            .setTitle("🌙 Digital Sunset: BedTime Approaching")
-            .setMessage("“In peace I will both lie down and sleep; for you alone, O LORD, make me dwell in safety.” (Psalm 4:8)\n\nBedTime Total Lockdown begins at 22:00. Time to wind down your work, step away from screens, and prepare for peaceful rest.")
-            .setPositiveButton("Prepare for Rest 🛌", null)
-            .show()
     }
 }
 

@@ -471,25 +471,18 @@ class WeeklyPlanActivity : AppCompatActivity() {
         updateCalculatedPreview()
 
         dialogBinding.tvQuickPresets.setOnClickListener {
-            // Cycle through foundation presets: 05:30, 05:45, 22:30
+            // Cycle through presets: 05:00, 22:00
             val curHour = dialogBinding.etHour.text.toString()
-            val curMin = dialogBinding.etMinute.text.toString()
-            if (curHour == "05" && curMin == "30") {
-                dialogBinding.etHour.setText("05")
-                dialogBinding.etMinute.setText("45")
-                dialogBinding.etTaskTitle.setText("Pray & Scripture at 5:45")
-                dialogBinding.spinnerTaskMode.setSelection(3) // Meditation
-                dialogBinding.spinnerDuration.setSelection(1) // 30 min
-            } else if (curHour == "05" && curMin == "45") {
+            if (curHour == "05") {
                 dialogBinding.etHour.setText("22")
-                dialogBinding.etMinute.setText("30")
-                dialogBinding.etTaskTitle.setText("BedTime 22:30")
+                dialogBinding.etMinute.setText("00")
+                dialogBinding.etTaskTitle.setText("BedTime 22:00")
                 dialogBinding.spinnerTaskMode.setSelection(4) // BedTime
                 dialogBinding.spinnerDuration.setSelection(0) // Direct Alarm
             } else {
                 dialogBinding.etHour.setText("05")
-                dialogBinding.etMinute.setText("30")
-                dialogBinding.etTaskTitle.setText("Wake Up at 5:30 AM")
+                dialogBinding.etMinute.setText("00")
+                dialogBinding.etTaskTitle.setText("Wake Up at 5:00 AM")
                 dialogBinding.spinnerTaskMode.setSelection(0)
                 dialogBinding.spinnerDuration.setSelection(0) // Direct Alarm
             }
