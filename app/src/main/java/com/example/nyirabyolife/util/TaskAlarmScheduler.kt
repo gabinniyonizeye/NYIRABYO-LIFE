@@ -92,11 +92,16 @@ object TaskAlarmScheduler {
         showPendingIntent: PendingIntent
     ) {
         try {
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
+            alarmManager.setAlarmClock(
+                AlarmManager.AlarmClockInfo(triggerTime, showPendingIntent),
+                pendingIntent
+            )
         } catch (_: SecurityException) {
             try {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
+            } catch (_: Exception) {
                 alarmManager.set(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
-            } catch (_: Exception) {}
+            }
         }
     }
 
