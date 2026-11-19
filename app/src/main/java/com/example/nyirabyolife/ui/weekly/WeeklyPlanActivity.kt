@@ -66,8 +66,8 @@ class WeeklyPlanActivity : AppCompatActivity() {
         currentYear = cal.get(Calendar.YEAR)
         selectedDayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
 
-        dbHelper.ensurePermanentWakeupAndBedtime(currentWeekOfYear, currentYear)
-        TaskAlarmScheduler.schedulePermanentAlarms(this)
+        // Purge any lingering ghost alarms so user has complete control of all alarms
+        TaskAlarmScheduler.purgeAllGhostAlarms(this)
 
         if (!com.example.nyirabyolife.data.local.PreferencesManager.getInstance(this).isTasksCustomizedByUser()) {
             dbHelper.ensureDefaultSundayWeeklyPlanIfEmpty(currentWeekOfYear, currentYear)
@@ -83,12 +83,12 @@ class WeeklyPlanActivity : AppCompatActivity() {
                 .setMessage("This will remove all scheduled tasks and alarms so you can set your own fresh schedule from scratch.\n\nAre you sure you want to reset everything?")
                 .setPositiveButton("Reset Everything") { _, _ ->
                     TaskAlarmScheduler.cancelAllAlarms(this)
+                    TaskAlarmScheduler.cancelPermanentAlarms(this)
+                    TaskAlarmScheduler.purgeAllGhostAlarms(this)
                     dbHelper.resetAllTasks()
-                    dbHelper.ensurePermanentWakeupAndBedtime(currentWeekOfYear, currentYear)
-                    TaskAlarmScheduler.schedulePermanentAlarms(this)
                     loadTasksForSelectedDay()
                     renderDayTabs()
-                    Toast.makeText(this, "Schedule reset! Permanent Wake Up (5:30 AM) and BedTime (22:30) preserved.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "All tasks and alarms cleared. You can now define your own schedule.", Toast.LENGTH_LONG).show()
                 }
                 .setNegativeButton("Cancel", null)
                 .show()
@@ -282,22 +282,45 @@ class WeeklyPlanActivity : AppCompatActivity() {
 
             itemBinding.btnToggleAlarm.setOnClickListener {
                 val newAlarmStatus = !task.isAlarmEnabled
-                dbHelper.toggleWeeklyTaskAlarm(task.id, newAlarmStatus)
-                if (newAlarmStatus) {
-                    TaskAlarmScheduler.scheduleTaskAlarm(this, task.copy(isAlarmEnabled = true))
-                    Toast.makeText(this, "⏰ Loud Alarm primed for ${task.formattedTime}", Toast.LENGTH_SHORT).show()
-                } else {
-                    TaskAlarmScheduler.cancelTaskAlarm(this, task.id)
-                    Toast.makeText(this, "Alarm disabled for this task", Toast.LENGTH_SHORT).show()
+                val affectedTasks = dbHelper.toggleWeeklyTaskAlarm(task.id, newAlarmStatus)
+                affectedTasks.forEach { affected ->
+                    if (newAlarmStatus) {
+                        TaskAlarmScheduler.scheduleTaskAlarm(this, affected)
+                    } else {
+                        TaskAlarmScheduler.cancelTaskAlarm(this, affected.id)
+                    }
                 }
+                val msg = if (newAlarmStatus) "⏰ Loud Alarm primed for ${task.formattedTime}" else "Alarm disabled for this task"
+                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
                 loadTasksForSelectedDay()
             }
 
             // Delete task
             itemBinding.btnDeleteTask.setOnClickListener {
-                TaskAlarmScheduler.cancelTaskAlarm(this, task.id)
-                dbHelper.deleteWeeklyTask(task.id)
-                loadTasksForSelectedDay()
+                if (task.isDaily) {
+                    AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
+                        .setTitle("Delete Daily Task?")
+                        .setMessage("This task repeats every day. Do you want to remove it for all 7 days or just today?")
+                        .setPositiveButton("All Days (Daily)") { _, _ ->
+                            val deletedIds = dbHelper.deleteWeeklyTask(task.id, deleteAllRecurringDays = true)
+                            deletedIds.forEach { TaskAlarmScheduler.cancelTaskAlarm(this, it) }
+                            loadTasksForSelectedDay()
+                            Toast.makeText(this, "Daily task & alarms removed.", Toast.LENGTH_SHORT).show()
+                        }
+                        .setNeutralButton("This Day Only") { _, _ ->
+                            val deletedIds = dbHelper.deleteWeeklyTask(task.id, deleteAllRecurringDays = false)
+                            deletedIds.forEach { TaskAlarmScheduler.cancelTaskAlarm(this, it) }
+                            loadTasksForSelectedDay()
+                            Toast.makeText(this, "Task & alarm removed for today.", Toast.LENGTH_SHORT).show()
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                } else {
+                    val deletedIds = dbHelper.deleteWeeklyTask(task.id, deleteAllRecurringDays = false)
+                    deletedIds.forEach { TaskAlarmScheduler.cancelTaskAlarm(this, it) }
+                    loadTasksForSelectedDay()
+                    Toast.makeText(this, "Task and alarm removed.", Toast.LENGTH_SHORT).show()
+                }
             }
 
             binding.layoutTasksContainer.addView(itemBinding.root)
@@ -525,12 +548,15 @@ class WeeklyPlanActivity : AppCompatActivity() {
                         isDaily = isDaily,
                         durationMinutes = selectedDuration
                     )
-                    dbHelper.updateWeeklyTask(updatedTask)
                     TaskAlarmScheduler.cancelTaskAlarm(this, taskToEdit.id)
-                    if (isAlarm && !taskToEdit.isCompleted) {
-                        TaskAlarmScheduler.scheduleTaskAlarm(this, updatedTask)
+                    val updatedList = dbHelper.updateWeeklyTask(updatedTask, updateAllRecurringDays = true)
+                    for (t in updatedList) {
+                        TaskAlarmScheduler.cancelTaskAlarm(this, t.id)
+                        if (t.isAlarmEnabled && !t.isCompleted) {
+                            TaskAlarmScheduler.scheduleTaskAlarm(this, t)
+                        }
                     }
-                    Toast.makeText(this, "Task updated! ⏰", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Task & alarm updated! ⏰", Toast.LENGTH_SHORT).show()
                     selectedDayOfWeek = dayOfWeekCode
                 } else {
                     val newTask = WeeklyPlanTask(
@@ -550,8 +576,13 @@ class WeeklyPlanActivity : AppCompatActivity() {
                     if (isDaily) {
                         val ids = dbHelper.addDailyRecurringTask(newTask)
                         if (isAlarm) {
-                            TaskAlarmScheduler.scheduleTaskAlarm(this, newTask.copy(id = ids.firstOrNull() ?: 0L))
-                            Toast.makeText(this, "Daily foundation primed for all 7 days! ⏰ %02d:%02d".format(safeHour, safeMinute), Toast.LENGTH_LONG).show()
+                            for (id in ids) {
+                                val t = dbHelper.getWeeklyTaskById(id)
+                                if (t != null) {
+                                    TaskAlarmScheduler.scheduleTaskAlarm(this, t)
+                                }
+                            }
+                            Toast.makeText(this, "Daily foundation & alarms primed for all 7 days! ⏰ %02d:%02d".format(safeHour, safeMinute), Toast.LENGTH_LONG).show()
                         } else {
                             Toast.makeText(this, "Daily task added across all 7 days", Toast.LENGTH_SHORT).show()
                         }
@@ -574,10 +605,30 @@ class WeeklyPlanActivity : AppCompatActivity() {
 
         if (taskToEdit != null) {
             builder.setNeutralButton("Delete Task") { _, _ ->
-                TaskAlarmScheduler.cancelTaskAlarm(this, taskToEdit.id)
-                dbHelper.deleteWeeklyTask(taskToEdit.id)
-                loadTasksForSelectedDay()
-                Toast.makeText(this, "Task deleted", Toast.LENGTH_SHORT).show()
+                if (taskToEdit.isDaily) {
+                    AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
+                        .setTitle("Delete Daily Task?")
+                        .setMessage("This task repeats every day. Do you want to remove it for all 7 days or just today?")
+                        .setPositiveButton("All Days (Daily)") { _, _ ->
+                            val deletedIds = dbHelper.deleteWeeklyTask(taskToEdit.id, deleteAllRecurringDays = true)
+                            deletedIds.forEach { TaskAlarmScheduler.cancelTaskAlarm(this, it) }
+                            loadTasksForSelectedDay()
+                            Toast.makeText(this, "Daily task & alarms removed.", Toast.LENGTH_SHORT).show()
+                        }
+                        .setNeutralButton("This Day Only") { _, _ ->
+                            val deletedIds = dbHelper.deleteWeeklyTask(taskToEdit.id, deleteAllRecurringDays = false)
+                            deletedIds.forEach { TaskAlarmScheduler.cancelTaskAlarm(this, it) }
+                            loadTasksForSelectedDay()
+                            Toast.makeText(this, "Task & alarm removed for today.", Toast.LENGTH_SHORT).show()
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                } else {
+                    val deletedIds = dbHelper.deleteWeeklyTask(taskToEdit.id, deleteAllRecurringDays = false)
+                    deletedIds.forEach { TaskAlarmScheduler.cancelTaskAlarm(this, it) }
+                    loadTasksForSelectedDay()
+                    Toast.makeText(this, "Task and alarm removed.", Toast.LENGTH_SHORT).show()
+                }
             }
         }
 

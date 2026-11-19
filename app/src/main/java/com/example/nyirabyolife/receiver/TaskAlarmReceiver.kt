@@ -155,18 +155,18 @@ class TaskAlarmReceiver : BroadcastReceiver() {
     }
 
     private fun rearmAlarm(context: Context, taskId: Long, isDaily: Boolean) {
-        if (taskId == TaskAlarmScheduler.WAKEUP_ALARM_ID.toLong()) {
-            TaskAlarmScheduler.schedulePermanentWakeupAlarm(context)
-            return
-        }
-        if (taskId == TaskAlarmScheduler.BEDTIME_ALARM_ID.toLong()) {
-            TaskAlarmScheduler.schedulePermanentBedtimeAlarm(context)
+        if (taskId == TaskAlarmScheduler.WAKEUP_ALARM_ID.toLong() ||
+            taskId == TaskAlarmScheduler.BEDTIME_ALARM_ID.toLong()) {
+            TaskAlarmScheduler.cancelTaskAlarm(context, taskId)
             return
         }
 
         val db = NyirabyoDbHelper.getInstance(context)
-        val task = db.getWeeklyTaskById(taskId) ?: return
-        if (!task.isAlarmEnabled) return
+        val task = db.getWeeklyTaskById(taskId)
+        if (task == null || !task.isAlarmEnabled || task.isCompleted) {
+            TaskAlarmScheduler.cancelTaskAlarm(context, taskId)
+            return
+        }
 
         TaskAlarmScheduler.scheduleTaskAlarm(context, task)
     }

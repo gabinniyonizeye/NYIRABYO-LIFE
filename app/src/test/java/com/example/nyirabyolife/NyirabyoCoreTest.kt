@@ -168,4 +168,28 @@ class NyirabyoCoreTest {
         val overdueItem = futureItem.copy(deadlineTimestamp = now - 86400000L * 2)
         assertTrue(overdueItem.timeframeBadgeText!!.contains("overdue"))
     }
+
+    @Test
+    fun weeklyPlanTask_triggerMillisCalculation() {
+        val nextTrigger = com.example.nyirabyolife.util.TaskAlarmScheduler.computeNextTriggerTimeMillis(
+            java.util.Calendar.MONDAY, 8, 30
+        )
+        val now = System.currentTimeMillis()
+        assertTrue("Trigger must always be in the future", nextTrigger > now)
+    }
+
+    @Test
+    fun weeklyPlanTask_directAlarmFormatting() {
+        val directAlarm = com.example.nyirabyolife.data.model.WeeklyPlanTask(
+            title = "Wake Up",
+            dayOfWeek = java.util.Calendar.MONDAY,
+            timeHour = 6,
+            timeMinute = 0,
+            weekOfYear = 47,
+            year = 2026,
+            durationMinutes = 0
+        )
+        assertEquals("06:00", directAlarm.formattedTime)
+        assertEquals("06:00 • Direct Alarm", directAlarm.formattedTimeRange)
+    }
 }

@@ -261,72 +261,7 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
     }
 
     fun ensurePermanentWakeupAndBedtime(weekOfYear: Int, year: Int) {
-        val allTasks = getAllWeeklyTasks()
-        for (day in Calendar.SUNDAY..Calendar.SATURDAY) {
-            val dayTasks = allTasks.filter { it.dayOfWeek == day }
-
-            // 1. Permanent Wake Up at 5:30 AM
-            val existingWakeup = dayTasks.find { it.title.trim().lowercase().contains("wake up") }
-            if (existingWakeup != null) {
-                if (existingWakeup.timeHour != 5 || existingWakeup.timeMinute != 30 || !existingWakeup.isAlarmEnabled) {
-                    val updated = existingWakeup.copy(
-                        title = "Wake Up at 5:30 AM",
-                        timeHour = 5,
-                        timeMinute = 30,
-                        isAlarmEnabled = true,
-                        durationMinutes = 0
-                    )
-                    updateWeeklyTask(updated)
-                    TaskAlarmScheduler.scheduleTaskAlarm(context, updated)
-                }
-            } else {
-                val newWakeup = WeeklyPlanTask(
-                    title = "Wake Up at 5:30 AM",
-                    dayOfWeek = day,
-                    timeHour = 5,
-                    timeMinute = 30,
-                    isAlarmEnabled = true,
-                    weekOfYear = weekOfYear,
-                    year = year,
-                    taskMode = "NORMAL",
-                    isDaily = true,
-                    durationMinutes = 0
-                )
-                val id = addWeeklyTask(newWakeup)
-                TaskAlarmScheduler.scheduleTaskAlarm(context, newWakeup.copy(id = id))
-            }
-
-            // 2. Permanent BedTime at 22:30 (giving exactly 7 hours of sleep until 05:30 AM)
-            val existingBedtime = dayTasks.find { it.title.trim().lowercase().contains("bedtime") }
-            if (existingBedtime != null) {
-                if (existingBedtime.timeHour != 22 || existingBedtime.timeMinute != 30 || !existingBedtime.isAlarmEnabled) {
-                    val updated = existingBedtime.copy(
-                        title = "BedTime 22:30",
-                        timeHour = 22,
-                        timeMinute = 30,
-                        isAlarmEnabled = true,
-                        durationMinutes = 0
-                    )
-                    updateWeeklyTask(updated)
-                    TaskAlarmScheduler.scheduleTaskAlarm(context, updated)
-                }
-            } else {
-                val newBedtime = WeeklyPlanTask(
-                    title = "BedTime 22:30",
-                    dayOfWeek = day,
-                    timeHour = 22,
-                    timeMinute = 30,
-                    isAlarmEnabled = true,
-                    weekOfYear = weekOfYear,
-                    year = year,
-                    taskMode = "BEDTIME",
-                    isDaily = true,
-                    durationMinutes = 0
-                )
-                val id = addWeeklyTask(newBedtime)
-                TaskAlarmScheduler.scheduleTaskAlarm(context, newBedtime.copy(id = id))
-            }
-        }
+        // Disabled: User has full autonomous control over their own schedule and alarms.
     }
 
     fun ensureFoundationTasksForDay(dayOfWeek: Int, weekOfYear: Int, year: Int) {
@@ -388,7 +323,6 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
     }
 
     fun getSynchronizedDailyMissions(date: String, dayOfWeek: Int, weekOfYear: Int, year: Int): List<Mission> {
-        ensurePermanentWakeupAndBedtime(weekOfYear, year)
         if (!PreferencesManager.getInstance(context).isTasksCustomizedByUser()) {
             ensureDefaultSundayWeeklyPlanIfEmpty(weekOfYear, year)
             ensureFoundationTasksForDay(dayOfWeek, weekOfYear, year)
@@ -848,9 +782,86 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
         }
     }
 
-    fun updateWeeklyTask(task: WeeklyPlanTask) {
-        val oldTask = getWeeklyTaskById(task.id)
+    fun updateWeeklyTask(task: WeeklyPlanTask, updateAllRecurringDays: Boolean = true): List<WeeklyPlanTask> {
+        val oldTask = getWeeklyTaskById(task.id) ?: return emptyList()
         val db = writableDatabase
+        val resultList = mutableListOf<WeeklyPlanTask>()
+
+        if (updateAllRecurringDays && (oldTask.isDaily || task.isDaily)) {
+            val cursor = db.query(
+                "weekly_plans",
+                null,
+                "title = ? AND is_daily = 1 AND week_of_year = ? AND year = ?",
+                arrayOf(oldTask.title, oldTask.weekOfYear.toString(), oldTask.year.toString()),
+                null, null, null
+            )
+            val siblingTasks = mutableListOf<WeeklyPlanTask>()
+            cursor.use {
+                while (it.moveToNext()) {
+                    siblingTasks.add(cursorToWeeklyTask(it))
+                }
+            }
+
+            if (!task.isDaily) {
+                // Converted from daily to single day: remove other days
+                for (sib in siblingTasks) {
+                    if (sib.id != task.id) {
+                        TaskAlarmScheduler.cancelTaskAlarm(context, sib.id)
+                        db.delete("weekly_plans", "id = ?", arrayOf(sib.id.toString()))
+                    }
+                }
+                updateSingleWeeklyTaskRow(db, task)
+                resultList.add(task)
+            } else if (siblingTasks.isEmpty()) {
+                // Converted from single day to daily: add remaining days
+                updateSingleWeeklyTaskRow(db, task)
+                resultList.add(task)
+                for (day in Calendar.SUNDAY..Calendar.SATURDAY) {
+                    if (day != task.dayOfWeek) {
+                        val sibling = task.copy(id = 0, dayOfWeek = day, isDaily = true)
+                        val newId = addWeeklyTask(sibling)
+                        resultList.add(sibling.copy(id = newId))
+                    }
+                }
+            } else {
+                // Update all sibling days
+                for (sib in siblingTasks) {
+                    val updated = sib.copy(
+                        title = task.title,
+                        timeHour = task.timeHour,
+                        timeMinute = task.timeMinute,
+                        isAlarmEnabled = task.isAlarmEnabled,
+                        taskMode = task.taskMode,
+                        durationMinutes = task.durationMinutes,
+                        isDaily = true
+                    )
+                    updateSingleWeeklyTaskRow(db, updated)
+                    resultList.add(updated)
+                }
+            }
+        } else {
+            updateSingleWeeklyTaskRow(db, task)
+            resultList.add(task)
+        }
+
+        // Synchronize with missions table for today
+        if (oldTask != null) {
+            val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            val mValues = ContentValues().apply {
+                put("title", task.title)
+                put("time_hour", task.timeHour)
+                put("time_minute", task.timeMinute)
+                put("task_mode", task.taskMode)
+                put("duration_minutes", task.durationMinutes)
+            }
+            db.update("missions", mValues, "date = ? AND title = ?", arrayOf(todayDate, oldTask.title))
+        }
+
+        PreferencesManager.getInstance(context).setTasksCustomizedByUser(true)
+        return resultList
+    }
+
+    private fun updateSingleWeeklyTaskRow(db: SQLiteDatabase, task: WeeklyPlanTask) {
         val values = ContentValues().apply {
             put("title", task.title)
             put("day_of_week", task.dayOfWeek)
@@ -862,24 +873,6 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
             put("duration_minutes", task.durationMinutes)
         }
         db.update("weekly_plans", values, "id = ?", arrayOf(task.id.toString()))
-        PreferencesManager.getInstance(context).setTasksCustomizedByUser(true)
-
-        if (oldTask != null) {
-            val cal = Calendar.getInstance()
-            if (oldTask.dayOfWeek == cal.get(Calendar.DAY_OF_WEEK) &&
-                oldTask.weekOfYear == cal.get(Calendar.WEEK_OF_YEAR) &&
-                oldTask.year == cal.get(Calendar.YEAR)) {
-                val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-                val mValues = ContentValues().apply {
-                    put("title", task.title)
-                    put("time_hour", task.timeHour)
-                    put("time_minute", task.timeMinute)
-                    put("task_mode", task.taskMode)
-                    put("duration_minutes", task.durationMinutes)
-                }
-                db.update("missions", mValues, "date = ? AND title = ?", arrayOf(todayDate, oldTask.title))
-            }
-        }
     }
 
     fun resetAllTasks() {
@@ -903,27 +896,84 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
         db.update("weekly_plans", values, "id = ?", arrayOf(id.toString()))
     }
 
-    fun toggleWeeklyTaskAlarm(id: Long, isAlarmEnabled: Boolean) {
+    fun toggleWeeklyTaskAlarm(id: Long, isAlarmEnabled: Boolean): List<WeeklyPlanTask> {
+        val task = getWeeklyTaskById(id) ?: return emptyList()
         val db = writableDatabase
-        val values = ContentValues().apply {
-            put("is_alarm_enabled", if (isAlarmEnabled) 1 else 0)
+        val affected = mutableListOf<WeeklyPlanTask>()
+
+        if (task.isDaily) {
+            val cursor = db.query(
+                "weekly_plans",
+                null,
+                "title = ? AND is_daily = 1 AND week_of_year = ? AND year = ?",
+                arrayOf(task.title, task.weekOfYear.toString(), task.year.toString()),
+                null, null, null
+            )
+            cursor.use {
+                while (it.moveToNext()) {
+                    affected.add(cursorToWeeklyTask(it).copy(isAlarmEnabled = isAlarmEnabled))
+                }
+            }
+            val values = ContentValues().apply {
+                put("is_alarm_enabled", if (isAlarmEnabled) 1 else 0)
+            }
+            db.update(
+                "weekly_plans",
+                values,
+                "title = ? AND is_daily = 1 AND week_of_year = ? AND year = ?",
+                arrayOf(task.title, task.weekOfYear.toString(), task.year.toString())
+            )
+        } else {
+            val values = ContentValues().apply {
+                put("is_alarm_enabled", if (isAlarmEnabled) 1 else 0)
+            }
+            db.update("weekly_plans", values, "id = ?", arrayOf(id.toString()))
+            affected.add(task.copy(isAlarmEnabled = isAlarmEnabled))
         }
-        db.update("weekly_plans", values, "id = ?", arrayOf(id.toString()))
+        return affected
     }
 
-    fun deleteWeeklyTask(id: Long) {
-        val task = getWeeklyTaskById(id)
-        writableDatabase.delete("weekly_plans", "id = ?", arrayOf(id.toString()))
+    fun deleteWeeklyTask(id: Long, deleteAllRecurringDays: Boolean = false): List<Long> {
+        val task = getWeeklyTaskById(id) ?: return emptyList()
+        val db = writableDatabase
+        val deletedIds = mutableListOf<Long>()
 
-        if (task != null) {
-            val cal = Calendar.getInstance()
-            if (task.dayOfWeek == cal.get(Calendar.DAY_OF_WEEK) &&
-                task.weekOfYear == cal.get(Calendar.WEEK_OF_YEAR) &&
-                task.year == cal.get(Calendar.YEAR)) {
-                val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-                writableDatabase.delete("missions", "date = ? AND title = ?", arrayOf(todayDate, task.title))
+        if (deleteAllRecurringDays && task.isDaily) {
+            val cursor = db.query(
+                "weekly_plans",
+                arrayOf("id"),
+                "title = ? AND is_daily = 1 AND week_of_year = ? AND year = ?",
+                arrayOf(task.title, task.weekOfYear.toString(), task.year.toString()),
+                null, null, null
+            )
+            cursor.use {
+                while (it.moveToNext()) {
+                    deletedIds.add(it.getLong(0))
+                }
             }
+            if (deletedIds.isNotEmpty()) {
+                val placeholders = deletedIds.joinToString(",") { "?" }
+                val args = deletedIds.map { it.toString() }.toTypedArray()
+                db.delete("weekly_plans", "id IN ($placeholders)", args)
+            }
+        } else {
+            deletedIds.add(id)
+            db.delete("weekly_plans", "id = ?", arrayOf(id.toString()))
         }
+
+        // Cancel alarms for all deleted IDs immediately
+        for (delId in deletedIds) {
+            TaskAlarmScheduler.cancelTaskAlarm(context, delId)
+        }
+
+        val cal = Calendar.getInstance()
+        if (task.dayOfWeek == cal.get(Calendar.DAY_OF_WEEK) || (deleteAllRecurringDays && task.isDaily)) {
+            val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            db.delete("missions", "date = ? AND title = ?", arrayOf(todayDate, task.title))
+        }
+
+        PreferencesManager.getInstance(context).setTasksCustomizedByUser(true)
+        return deletedIds
     }
 
     private fun cursorToWeeklyTask(cursor: android.database.Cursor): WeeklyPlanTask {

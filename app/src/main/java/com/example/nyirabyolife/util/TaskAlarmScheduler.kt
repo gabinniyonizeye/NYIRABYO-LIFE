@@ -30,13 +30,11 @@ object TaskAlarmScheduler {
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
 
-        // For daily tasks, always schedule for the next upcoming occurrence from today
-        // regardless of which dayOfWeek the task was originally saved under
-        val triggerTime = if (task.isDaily) {
-            computeNextDailyTriggerMillis(task.timeHour, task.timeMinute)
-        } else {
-            computeNextTriggerTimeMillis(task.dayOfWeek, task.timeHour, task.timeMinute)
-        }
+        // Always cancel any prior alarm registration for this ID first so no stale trigger remains
+        cancelTaskAlarm(context, task.id)
+
+        // For each task in weekly_plans, schedule for its specific dayOfWeek occurrence
+        val triggerTime = computeNextTriggerTimeMillis(task.dayOfWeek, task.timeHour, task.timeMinute)
 
         val intent = Intent(context, TaskAlarmReceiver::class.java).apply {
             action = TaskAlarmReceiver.ACTION_FIRE_ALARM
@@ -67,74 +65,24 @@ object TaskAlarmScheduler {
     }
 
     /**
-     * Schedule one of the two permanent (hardcoded) system alarms:
-     * - Wake Up at 05:30 every day (WAKEUP_ALARM_ID)
-     * - Bedtime at 22:30 every day (BEDTIME_ALARM_ID)
-     * These guarantee exactly 7 hours of sleep and survive resets.
+     * Permanent hardcoded alarms (900001, 900002) are retired so that the user has 100% control
+     * over their own schedule and alarms. These methods now actively cancel any lingering ghost alarms.
      */
+    fun cancelPermanentAlarms(context: Context) {
+        cancelTaskAlarm(context, WAKEUP_ALARM_ID.toLong())
+        cancelTaskAlarm(context, BEDTIME_ALARM_ID.toLong())
+    }
+
     fun schedulePermanentWakeupAlarm(context: Context) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-        val triggerTime = computeNextDailyTriggerMillis(5, 30)
-
-        val intent = Intent(context, TaskAlarmReceiver::class.java).apply {
-            action = TaskAlarmReceiver.ACTION_FIRE_ALARM
-            putExtra(EXTRA_TASK_ID, WAKEUP_ALARM_ID.toLong())
-            putExtra(EXTRA_TASK_TITLE, "⏰ Wake Up — 05:30 AM")
-            putExtra(EXTRA_TASK_TIME, "05:30")
-            putExtra(EXTRA_TASK_MODE, "NORMAL")
-            putExtra(EXTRA_TASK_DURATION_MINUTES, 0)
-            putExtra(EXTRA_IS_DAILY, true)
-        }
-
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            WAKEUP_ALARM_ID,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val showIntent = Intent(context, com.example.nyirabyolife.ui.home.HomeActivity::class.java)
-        val showPendingIntent = PendingIntent.getActivity(
-            context, WAKEUP_ALARM_ID, showIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        setExactAlarmSafely(alarmManager, triggerTime, pendingIntent, showPendingIntent)
+        cancelTaskAlarm(context, WAKEUP_ALARM_ID.toLong())
     }
 
     fun schedulePermanentBedtimeAlarm(context: Context) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-        val triggerTime = computeNextDailyTriggerMillis(22, 30)
-
-        val intent = Intent(context, TaskAlarmReceiver::class.java).apply {
-            action = TaskAlarmReceiver.ACTION_FIRE_ALARM
-            putExtra(EXTRA_TASK_ID, BEDTIME_ALARM_ID.toLong())
-            putExtra(EXTRA_TASK_TITLE, "🌙 BedTime — 22:30")
-            putExtra(EXTRA_TASK_TIME, "22:30")
-            putExtra(EXTRA_TASK_MODE, "BEDTIME")
-            putExtra(EXTRA_TASK_DURATION_MINUTES, 0)
-            putExtra(EXTRA_IS_DAILY, true)
-        }
-
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            BEDTIME_ALARM_ID,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val showIntent = Intent(context, com.example.nyirabyolife.ui.home.HomeActivity::class.java)
-        val showPendingIntent = PendingIntent.getActivity(
-            context, BEDTIME_ALARM_ID, showIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        setExactAlarmSafely(alarmManager, triggerTime, pendingIntent, showPendingIntent)
+        cancelTaskAlarm(context, BEDTIME_ALARM_ID.toLong())
     }
 
     fun schedulePermanentAlarms(context: Context) {
-        schedulePermanentWakeupAlarm(context)
-        schedulePermanentBedtimeAlarm(context)
+        cancelPermanentAlarms(context)
     }
 
     private fun setExactAlarmSafely(
@@ -159,23 +107,84 @@ object TaskAlarmScheduler {
 
     fun cancelTaskAlarm(context: Context, taskId: Long) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-        val intent = Intent(context, TaskAlarmReceiver::class.java).apply {
-            action = TaskAlarmReceiver.ACTION_FIRE_ALARM
-        }
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            taskId.toInt(),
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        alarmManager.cancel(pendingIntent)
+        try {
+            val intent = Intent(context, TaskAlarmReceiver::class.java).apply {
+                action = TaskAlarmReceiver.ACTION_FIRE_ALARM
+            }
+            val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                taskId.toInt(),
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            alarmManager.cancel(pendingIntent)
+            pendingIntent.cancel()
+        } catch (_: Exception) {}
+
+        try {
+            val showIntent = Intent(context, com.example.nyirabyolife.ui.home.HomeActivity::class.java)
+            val showPendingIntent = PendingIntent.getActivity(
+                context,
+                taskId.toInt(),
+                showIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            alarmManager.cancel(showPendingIntent)
+            showPendingIntent.cancel()
+        } catch (_: Exception) {}
     }
 
     fun cancelAllAlarms(context: Context) {
+        cancelPermanentAlarms(context)
         val db = NyirabyoDbHelper.getInstance(context)
-        // Cancel across all weeks (daily tasks span multiple week entries)
         val allTasks = db.getAllWeeklyTasks()
         allTasks.forEach { cancelTaskAlarm(context, it.id) }
+        purgeAllGhostAlarms(context)
+    }
+
+    /**
+     * Sweeps Android's AlarmManager for any lingering alarms that do not match currently active,
+     * alarm-enabled tasks in weekly_plans, ensuring no orphaned or deleted alarms can ever fire.
+     */
+    fun purgeAllGhostAlarms(context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+        cancelPermanentAlarms(context)
+
+        val db = NyirabyoDbHelper.getInstance(context)
+        val validTasks = db.getAllWeeklyTasks()
+        val activeAlarmIds = validTasks
+            .filter { it.isAlarmEnabled && !it.isCompleted }
+            .map { it.id.toInt() }
+            .toSet()
+
+        // Cancel alarms for tasks that are completed or alarm-disabled
+        validTasks.filter { !it.isAlarmEnabled || it.isCompleted }.forEach {
+            cancelTaskAlarm(context, it.id)
+        }
+
+        // Search for any orphaned PendingIntents up to recent ID bounds
+        val maxExistingId = validTasks.maxOfOrNull { it.id.toInt() } ?: 0
+        val scanLimit = (maxExistingId + 300).coerceAtLeast(600)
+
+        val intent = Intent(context, TaskAlarmReceiver::class.java).apply {
+            action = TaskAlarmReceiver.ACTION_FIRE_ALARM
+        }
+        for (reqCode in 1..scanLimit) {
+            if (reqCode !in activeAlarmIds) {
+                try {
+                    val existingBroadcast = PendingIntent.getBroadcast(
+                        context,
+                        reqCode,
+                        intent,
+                        PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    if (existingBroadcast != null) {
+                        alarmManager.cancel(existingBroadcast)
+                        existingBroadcast.cancel()
+                    }
+                } catch (_: Exception) {}
+            }
+        }
     }
 
     fun scheduleSnooze(context: Context, taskId: Long, title: String, timeFormatted: String, snoozeMinutes: Int = 10, taskMode: String = "NORMAL", durationMinutes: Int = 0, isDaily: Boolean = false) {
@@ -210,13 +219,12 @@ object TaskAlarmScheduler {
 
     /**
      * Reschedules all alarms — called on boot, app update, time change.
-     * Fetches ALL tasks (not just current week) so daily tasks are always included.
+     * Cleans up ghost alarms first, then schedules ONLY currently active, alarm-enabled tasks.
      */
     fun rescheduleAllActiveAlarms(context: Context) {
+        purgeAllGhostAlarms(context)
+
         val db = NyirabyoDbHelper.getInstance(context)
-        // Always reschedule permanent alarms first
-        schedulePermanentAlarms(context)
-        // Reschedule all user tasks across all weeks
         val allTasks = db.getAllWeeklyTasks()
         allTasks.filter { it.isAlarmEnabled && !it.isCompleted }.forEach {
             scheduleTaskAlarm(context, it)
