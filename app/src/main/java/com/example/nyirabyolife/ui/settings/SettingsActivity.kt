@@ -28,6 +28,11 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         prefs = PreferencesManager.getInstance(this)
+        if (prefs.isBedtimeLockdownActive()) {
+            android.widget.Toast.makeText(this, "🌙 BedTime Total Lockdown is active (22:00 – 05:00). Settings are locked.", android.widget.Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
         dbHelper = NyirabyoDbHelper.getInstance(this)
 
         binding.btnBack.setOnClickListener { finish() }

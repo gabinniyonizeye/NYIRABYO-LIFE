@@ -419,7 +419,33 @@ class PreferencesManager(context: Context) {
         // so user can always type, plan for the new day, and add tasks.
         if (isKeyboardOrIme(pkg)) return false
 
-        // Essential emergency & system apps: NEVER block under any restriction
+        // 1. BedTime Total Lockdown (22:00 - 05:00):
+        // STRICT TOTAL LOCKDOWN: ONLY emergency phone calls, keyboard, and clock/alarms are allowed.
+        // Google Play Store, Settings, Weather/Google Search, Browsers, WhatsApp, and all other apps are BLOCKED!
+        if (isBedtimeLockdownActive()) {
+            val bedtimeAllowed = listOf(
+                // Phone / emergency calls
+                "com.google.android.dialer",
+                "com.android.dialer",
+                "com.android.phone",
+                "com.android.incallui",
+                "com.google.android.incallui",
+                "com.google.android.emergency",
+                "com.android.emergency",
+                "com.android.server.telecom",
+                // Clock / Alarm
+                "com.google.android.deskclock",
+                "com.android.deskclock"
+            )
+            if (bedtimeAllowed.contains(pkg)) return false
+            if (pkg == "android" || pkg.startsWith("com.android.internal") || pkg == "com.android.systemui") {
+                return false
+            }
+            // EVERYTHING ELSE IS STRICTLY BLOCKED DURING BEDTIME (Settings, Play Store, Google, Weather, etc.)
+            return true
+        }
+
+        // Essential emergency & system apps outside bedtime:
         val essentialAllowed = listOf(
             // Keyboards & Input Methods
             "com.google.android.inputmethod.latin",
@@ -439,7 +465,7 @@ class PreferencesManager(context: Context) {
             // Clock / alarm
             "com.google.android.deskclock",
             "com.android.deskclock",
-            // System Settings — always accessible (guarded by PIN, not hard-blocked)
+            // System Settings — always accessible (guarded by PIN outside bedtime)
             "com.android.settings",
             // Messages / SMS — emergency communication
             "com.google.android.apps.messaging",
@@ -454,12 +480,6 @@ class PreferencesManager(context: Context) {
         // Also never block any core Android system package
         if (pkg == "android" || pkg.startsWith("com.android.internal") ||
             pkg == "com.android.systemui" || pkg == "com.google.android.gms") return false
-
-        // 1. BedTime Total Lockdown (22:00 - 05:00): blocks social/distraction apps only.
-        //    System apps, Settings, Phone, Messages are exempt (handled above).
-        if (isBedtimeLockdownActive()) {
-            return true
-        }
 
         // If temporarily unlocked intentionally, allow it (outside bedtime)
         if (isPackageTemporarilyUnlocked(pkg)) return false

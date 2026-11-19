@@ -113,10 +113,29 @@ class HomeActivity : AppCompatActivity() {
         setupTopHeaderAndDock()
     }
 
+    private var hasPromptedAccessibilityOnResume = false
+
     override fun onResume() {
         super.onResume()
         refreshAllData()
         com.example.nyirabyolife.util.HabitationReminderManager.checkAndShowAutomaticReminders(this)
+        checkGuardianAccessibilityState()
+    }
+
+    private fun checkGuardianAccessibilityState() {
+        if (!isAccessibilityServiceEnabled() && !hasPromptedAccessibilityOnResume) {
+            hasPromptedAccessibilityOnResume = true
+            android.app.AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
+                .setTitle("🛡️ Guardian Protection Needed")
+                .setMessage("To block distractions, enforce BedTime Lockdown, and guard settings, NYIRABYO Life needs Accessibility Permission enabled in system settings.\n\nOpen Settings to enable it now?")
+                .setPositiveButton("Turn ON") { _, _ ->
+                    try {
+                        startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    } catch (_: Exception) {}
+                }
+                .setNegativeButton("Later", null)
+                .show()
+        }
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -189,10 +208,18 @@ class HomeActivity : AppCompatActivity() {
         }
 
         binding.btnSettings.setOnClickListener {
+            if (prefs.isBedtimeLockdownActive()) {
+                android.widget.Toast.makeText(this, "🌙 BedTime Total Lockdown is active (22:00 – 05:00). Settings are locked.", android.widget.Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
             startActivity(Intent(this, SettingsActivity::class.java))
         }
 
         binding.btnOpenAppDrawer.setOnClickListener {
+            if (prefs.isBedtimeLockdownActive()) {
+                android.widget.Toast.makeText(this, "🌙 BedTime Total Lockdown is active (22:00 – 05:00). All apps are asleep.", android.widget.Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
             startActivity(Intent(this, AppDrawerActivity::class.java))
         }
 
@@ -205,6 +232,10 @@ class HomeActivity : AppCompatActivity() {
                 velocityY: Float
             ): Boolean {
                 if (e1 != null && (e1.y - e2.y > 120) && Math.abs(velocityY) > 100) {
+                    if (prefs.isBedtimeLockdownActive()) {
+                        android.widget.Toast.makeText(this@HomeActivity, "🌙 BedTime Total Lockdown is active (22:00 – 05:00). All apps are asleep.", android.widget.Toast.LENGTH_SHORT).show()
+                        return true
+                    }
                     startActivity(Intent(this@HomeActivity, AppDrawerActivity::class.java))
                     return true
                 }

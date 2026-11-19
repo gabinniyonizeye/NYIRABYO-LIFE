@@ -15,6 +15,7 @@ import android.os.VibratorManager
 import android.view.accessibility.AccessibilityEvent
 import com.example.nyirabyolife.data.local.PreferencesManager
 import com.example.nyirabyolife.receiver.ScreenLockReceiver
+import com.example.nyirabyolife.ui.home.HomeActivity
 import com.example.nyirabyolife.ui.lock.DisciplineLockActivity
 import com.example.nyirabyolife.ui.shield.BlockShieldActivity
 
@@ -47,6 +48,21 @@ class NyirabyoGuardianService : AccessibilityService() {
                     val isLockScreen = pkg == myPkg && (currentForegroundActivity?.contains("DisciplineLockActivity") == true)
                     if (!isLockScreen) {
                         triggerEscapeRoomLockdown()
+                    }
+                }
+            } else if (prefs.isBedtimeLockdownActive()) {
+                // Heartbeat watchdog for BedTime Total Lockdown (22:00 – 05:00)
+                if (pkg != null && !isSystemPhoneDialer(pkg) && !isKeyboardOrIme(pkg) && !isDeskClock(pkg) && !isSystemUiOrFramework(pkg)) {
+                    val isAllowedScreen = pkg == myPkg && (
+                        currentForegroundActivity?.contains("HomeActivity") == true ||
+                        currentForegroundActivity?.contains("WeeklyPlanActivity") == true ||
+                        currentForegroundActivity?.contains("BlockShieldActivity") == true ||
+                        currentForegroundActivity?.contains("UrgeCheckInActivity") == true ||
+                        currentForegroundActivity?.contains("HolyMeditationActivity") == true
+                    )
+                    if (!isAllowedScreen) {
+                        killAppProcesses(pkg)
+                        triggerShield(pkg, "BEDTIME_LOCKDOWN")
                     }
                 }
             } else if (pkg != null && pkg != myPkg && !isSystemHomeOrDialer(pkg) && !isKeyboardOrIme(pkg)) {
@@ -88,7 +104,7 @@ class NyirabyoGuardianService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event == null || event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+        if (event == null || (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && event.eventType != AccessibilityEvent.TYPE_WINDOWS_CHANGED)) {
             return
         }
 
@@ -143,9 +159,36 @@ class NyirabyoGuardianService : AccessibilityService() {
             return
         }
 
+        // 2. BEDTIME TOTAL LOCKDOWN CHECK (22:00 – 05:00):
+        // STRICT TOTAL LOCKDOWN: Only phone calls/dialer, keyboard, and clock/alarms are allowed.
+        // Google Search/Weather, Play Store, System Settings, WhatsApp, and all other apps are BLOCKED & KILLED!
+        if (prefs.isBedtimeLockdownActive()) {
+            if (isSystemPhoneDialer(targetPkg) || isKeyboardOrIme(targetPkg) || isDeskClock(targetPkg) || isSystemUiOrFramework(targetPkg)) {
+                return
+            }
+
+            if (targetPkg == myPkg) {
+                val isBlockedScreen = className.contains("SettingsActivity") ||
+                                      className.contains("AppDrawerActivity") ||
+                                      className.contains("AppRestrictionsActivity")
+                if (isBlockedScreen) {
+                    val homeIntent = Intent(this, HomeActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    }
+                    startActivity(homeIntent)
+                }
+                return
+            }
+
+            // Every other app (System Settings, Play Store, Weather, Google Search, WhatsApp, etc.):
+            killAppProcesses(targetPkg)
+            triggerShield(targetPkg, "BEDTIME_LOCKDOWN")
+            return
+        }
+
         if (targetPkg == myPkg) return
 
-        // 2. SETTINGS GUARD:
+        // 3. SETTINGS GUARD:
         if (targetPkg == "com.android.settings" || targetPkg.startsWith("com.android.settings.")) {
             if (prefs.isSettingsProtectionEnabled() && !prefs.isPackageTemporarilyUnlocked("com.android.settings")) {
                 triggerShield("com.android.settings", "SETTINGS_GUARD")
@@ -153,13 +196,13 @@ class NyirabyoGuardianService : AccessibilityService() {
             }
         }
 
-        // 3. DAILY USAGE LIMIT EXCEEDED:
+        // 4. DAILY USAGE LIMIT EXCEEDED:
         if (prefs.isAppUsageLimitExceeded(targetPkg) && !prefs.isPackageTemporarilyUnlocked(targetPkg)) {
             triggerShield(targetPkg, "USAGE_LIMIT_EXCEEDED")
             return
         }
 
-        // 4. RESTRICTED APP / FOCUS MODE / SOCIAL WINDOWS:
+        // 5. RESTRICTED APP / FOCUS MODE / SOCIAL WINDOWS:
         if (prefs.isPackageBlocked(targetPkg, myPkg)) {
             val reason = prefs.getBlockReason(targetPkg)
             triggerShield(targetPkg, reason)
@@ -248,6 +291,14 @@ class NyirabyoGuardianService : AccessibilityService() {
         return isExemptedPhoneService(pkg)
     }
 
+    private fun isDeskClock(pkg: String): Boolean {
+        return pkg == "com.google.android.deskclock" || pkg == "com.android.deskclock"
+    }
+
+    private fun isSystemUiOrFramework(pkg: String): Boolean {
+        return pkg == "android" || pkg == "com.android.systemui" || pkg.startsWith("com.android.internal")
+    }
+
     private fun triggerShield(packageName: String, reason: String) {
         // Debounce: if the shield is already showing for the same package, don't re-trigger
         val now = System.currentTimeMillis()
@@ -257,12 +308,22 @@ class NyirabyoGuardianService : AccessibilityService() {
         lastShieldPkg = packageName
         lastShieldTimeMs = now
 
+        // Kill the app process immediately so it cannot remain running underneath
+        killAppProcesses(packageName)
+
+        // Dismiss any open system popups, search overlays, or status bar shades
+        try {
+            @Suppress("DEPRECATION")
+            sendBroadcast(Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS))
+        } catch (_: Exception) {}
+
         // Single gentle vibration — no repeated jolts
         vibrateShieldAlert()
 
         val intent = Intent(this, BlockShieldActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)   // Reuse existing instance if on top
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION) // No jarring slide animation
             putExtra(BlockShieldActivity.EXTRA_PACKAGE_NAME, packageName)
             putExtra(BlockShieldActivity.EXTRA_BLOCK_REASON, reason)

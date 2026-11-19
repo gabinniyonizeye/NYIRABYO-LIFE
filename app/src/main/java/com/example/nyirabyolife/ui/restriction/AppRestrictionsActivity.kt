@@ -38,6 +38,11 @@ class AppRestrictionsActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         prefs = PreferencesManager.getInstance(this)
+        if (prefs.isBedtimeLockdownActive()) {
+            android.widget.Toast.makeText(this, "🌙 BedTime Total Lockdown is active (22:00 – 05:00)", android.widget.Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
         binding.btnBack.setOnClickListener { finish() }
 
         applyThemeColors()
