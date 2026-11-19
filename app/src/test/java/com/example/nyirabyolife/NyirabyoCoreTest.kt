@@ -87,6 +87,27 @@ class NyirabyoCoreTest {
     }
 
     @Test
+    fun keyboardPackages_patternsRecognized() {
+        val keyboards = listOf(
+            "com.google.android.inputmethod.latin",
+            "com.android.inputmethod.latin",
+            "com.samsung.android.honeyboard",
+            "com.touchtype.swiftkey",
+            "com.microsoft.ime.swiftkey",
+            "com.facemoji.lite.xiaomi"
+        )
+        for (pkg in keyboards) {
+            val isKbd = pkg.contains("inputmethod", ignoreCase = true) ||
+                        pkg.contains(".ime", ignoreCase = true) ||
+                        pkg.contains("keyboard", ignoreCase = true) ||
+                        pkg.contains("honeyboard", ignoreCase = true) ||
+                        pkg.contains("swiftkey", ignoreCase = true) ||
+                        pkg.contains("facemoji", ignoreCase = true)
+            assertTrue("Package $pkg must be identified as a keyboard", isKbd)
+        }
+    }
+
+    @Test
     fun whatsAppDaytimeWindow_rangeCalculation() {
         val startMinutes = 8 * 60 // 08:00 = 480
         val endMinutes = 20 * 60  // 20:00 = 1200

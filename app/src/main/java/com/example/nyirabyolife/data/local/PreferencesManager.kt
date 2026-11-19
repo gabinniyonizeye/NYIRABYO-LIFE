@@ -386,13 +386,47 @@ class PreferencesManager(context: Context) {
         return hour in 7..19
     }
 
+    fun isKeyboardOrIme(pkg: String): Boolean {
+        if (pkg.contains("inputmethod", ignoreCase = true) ||
+            pkg.contains(".ime", ignoreCase = true) ||
+            pkg.contains("keyboard", ignoreCase = true) ||
+            pkg.contains("honeyboard", ignoreCase = true) ||
+            pkg.contains("swiftkey", ignoreCase = true) ||
+            pkg.contains("fleksy", ignoreCase = true) ||
+            pkg.contains("facemoji", ignoreCase = true) ||
+            pkg.contains("kika", ignoreCase = true) ||
+            pkg.contains("typewise", ignoreCase = true) ||
+            pkg == "com.google.android.inputmethod.latin" ||
+            pkg == "com.android.inputmethod.latin"
+        ) {
+            return true
+        }
+        return try {
+            val imm = appContext.getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+            val installedImes = imm?.inputMethodList?.map { it.packageName }?.toSet() ?: emptySet()
+            installedImes.contains(pkg)
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     // --- CORE LOGIC: IS A PACKAGE CURRENTLY BLOCKED? ---
     fun isPackageBlocked(pkg: String, myPackageName: String): Boolean {
         // Never block launcher itself
         if (pkg == myPackageName) return false
 
+        // NEVER block keyboard under any restriction (bedtime, total block, or focus)
+        // so user can always type, plan for the new day, and add tasks.
+        if (isKeyboardOrIme(pkg)) return false
+
         // Essential emergency & system apps: NEVER block under any restriction
         val essentialAllowed = listOf(
+            // Keyboards & Input Methods
+            "com.google.android.inputmethod.latin",
+            "com.android.inputmethod.latin",
+            "com.samsung.android.honeyboard",
+            "com.touchtype.swiftkey",
+            "com.microsoft.ime.swiftkey",
             // Phone / calls
             "com.google.android.dialer",
             "com.android.dialer",

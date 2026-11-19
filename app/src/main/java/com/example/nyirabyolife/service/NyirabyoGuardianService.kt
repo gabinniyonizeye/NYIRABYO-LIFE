@@ -41,15 +41,15 @@ class NyirabyoGuardianService : AccessibilityService() {
             val myPkg = applicationContext.packageName
 
             // If Escape Room is active — heartbeat watchdog.
-            // Force back to lock screen if ANYTHING other than phone dialer or lockscreen is active.
+            // Force back to lock screen if ANYTHING other than phone dialer, keyboard, or lockscreen is active.
             if (prefs.isEscapeRoomActive()) {
-                if (pkg != null && !isSystemPhoneDialer(pkg)) {
+                if (pkg != null && !isSystemPhoneDialer(pkg) && !isKeyboardOrIme(pkg)) {
                     val isLockScreen = pkg == myPkg && (currentForegroundActivity?.contains("DisciplineLockActivity") == true)
                     if (!isLockScreen) {
                         triggerEscapeRoomLockdown()
                     }
                 }
-            } else if (pkg != null && pkg != myPkg && !isSystemHomeOrDialer(pkg)) {
+            } else if (pkg != null && pkg != myPkg && !isSystemHomeOrDialer(pkg) && !isKeyboardOrIme(pkg)) {
                 // Accumulate usage seconds for foreground app
                 prefs.addAppUsageSeconds(pkg, 5)
 
@@ -94,6 +94,11 @@ class NyirabyoGuardianService : AccessibilityService() {
 
         val targetPkg = event.packageName?.toString() ?: return
         val myPkg = applicationContext.packageName
+
+        // Never intercept, block, or kill keyboard / IME windows
+        if (isKeyboardOrIme(targetPkg)) {
+            return
+        }
 
         val className = event.className?.toString() ?: ""
         if (className.contains("Activity") || className.contains("ui.")) {
@@ -162,6 +167,7 @@ class NyirabyoGuardianService : AccessibilityService() {
     }
 
     private fun killAppProcesses(packageName: String) {
+        if (isKeyboardOrIme(packageName)) return
         try {
             val am = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
             am?.killBackgroundProcesses(packageName)
@@ -204,6 +210,7 @@ class NyirabyoGuardianService : AccessibilityService() {
     private fun isExemptedPhoneService(pkg: String): Boolean {
         val myPkg = applicationContext.packageName
         if (pkg == myPkg) return true
+        if (isKeyboardOrIme(pkg)) return true
         if (isSystemPhoneDialer(pkg)) return true
 
         val allowedServices = listOf(
@@ -217,6 +224,9 @@ class NyirabyoGuardianService : AccessibilityService() {
             "com.android.deskclock",
             "com.google.android.inputmethod.latin",
             "com.android.inputmethod.latin",
+            "com.samsung.android.honeyboard",
+            "com.touchtype.swiftkey",
+            "com.microsoft.ime.swiftkey",
             "com.google.android.gms",
             "com.google.android.gsf",
             "com.google.android.packageinstaller",
@@ -225,6 +235,13 @@ class NyirabyoGuardianService : AccessibilityService() {
             "com.bibiliya.ntagatifu"
         )
         return allowedServices.contains(pkg) || pkg.startsWith("com.android.internal")
+    }
+
+    private fun isKeyboardOrIme(pkg: String): Boolean {
+        if (!::prefs.isInitialized) {
+            prefs = PreferencesManager.getInstance(applicationContext)
+        }
+        return prefs.isKeyboardOrIme(pkg)
     }
 
     private fun isSystemHomeOrDialer(pkg: String): Boolean {
