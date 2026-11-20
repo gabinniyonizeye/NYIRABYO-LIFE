@@ -113,29 +113,10 @@ class HomeActivity : AppCompatActivity() {
         setupTopHeaderAndDock()
     }
 
-    private var hasPromptedAccessibilityOnResume = false
-
     override fun onResume() {
         super.onResume()
         refreshAllData()
         com.example.nyirabyolife.util.HabitationReminderManager.checkAndShowAutomaticReminders(this)
-        checkGuardianAccessibilityState()
-    }
-
-    private fun checkGuardianAccessibilityState() {
-        if (!isAccessibilityServiceEnabled() && !hasPromptedAccessibilityOnResume) {
-            hasPromptedAccessibilityOnResume = true
-            android.app.AlertDialog.Builder(this, com.google.android.material.R.style.Theme_MaterialComponents_DayNight_Dialog_Alert)
-                .setTitle("🛡️ Guardian Protection Needed")
-                .setMessage("To block distractions, enforce BedTime Lockdown, and guard settings, NYIRABYO Life needs Accessibility Permission enabled in system settings.\n\nOpen Settings to enable it now?")
-                .setPositiveButton("Turn ON") { _, _ ->
-                    try {
-                        startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                    } catch (_: Exception) {}
-                }
-                .setNegativeButton("Later", null)
-                .show()
-        }
     }
 
     override fun onNewIntent(intent: Intent?) {
