@@ -41,36 +41,38 @@ class NyirabyoGuardianService : AccessibilityService() {
             val pkg = currentForegroundPackage
             val myPkg = applicationContext.packageName
 
+            val powerManager = getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+            val isScreenOn = powerManager?.isInteractive ?: true
+            if (!isScreenOn) {
+                // Device screen is OFF / sleeping. Never run watchdog or wake device!
+                handler.postDelayed(this, usageCheckIntervalMs)
+                return
+            }
+
+            // ISOLATE NYIRABYO LIFE & SYSTEM ESSENTIALS:
+            // Never block, kill, or shield our own launcher, phone dialers, keyboards, or alarm clock
+            if (pkg == null || pkg == myPkg || isSystemPhoneDialer(pkg) || isKeyboardOrIme(pkg) || isDeskClock(pkg) || isSystemUiOrFramework(pkg)) {
+                handler.postDelayed(this, usageCheckIntervalMs)
+                return
+            }
+
             // If Escape Room is active — heartbeat watchdog.
-            // Force back to lock screen if ANYTHING other than phone dialer, keyboard, or lockscreen is active.
+            // Force back to lock screen if ANY third-party or non-dialer app is active.
             if (prefs.isEscapeRoomActive()) {
-                if (pkg != null && !isSystemPhoneDialer(pkg) && !isKeyboardOrIme(pkg)) {
-                    val isLockScreen = pkg == myPkg && (currentForegroundActivity?.contains("DisciplineLockActivity") == true)
-                    if (!isLockScreen) {
-                        triggerEscapeRoomLockdown()
-                    }
-                }
+                triggerEscapeRoomLockdown()
             } else if (prefs.isBedtimeLockdownActive()) {
                 // Heartbeat watchdog for BedTime Total Lockdown (22:00 – 05:00)
-                if (pkg != null && !isSystemPhoneDialer(pkg) && !isKeyboardOrIme(pkg) && !isDeskClock(pkg) && !isSystemUiOrFramework(pkg)) {
-                    val isAllowedScreen = pkg == myPkg && (
-                        currentForegroundActivity?.contains("HomeActivity") == true ||
-                        currentForegroundActivity?.contains("WeeklyPlanActivity") == true ||
-                        currentForegroundActivity?.contains("BlockShieldActivity") == true ||
-                        currentForegroundActivity?.contains("UrgeCheckInActivity") == true ||
-                        currentForegroundActivity?.contains("HolyMeditationActivity") == true
-                    )
-                    if (!isAllowedScreen) {
-                        killAppProcesses(pkg)
-                        triggerShield(pkg, "BEDTIME_LOCKDOWN")
-                    }
-                }
-            } else if (pkg != null && pkg != myPkg && !isSystemHomeOrDialer(pkg) && !isKeyboardOrIme(pkg)) {
+                killAppProcesses(pkg)
+                triggerShield(pkg, "BEDTIME_LOCKDOWN")
+            } else {
                 // Accumulate usage seconds for foreground app
-                prefs.addAppUsageSeconds(pkg, 5)
+                prefs.addAppUsageSeconds(pkg, 2)
 
                 if (prefs.isAppUsageLimitExceeded(pkg) && !prefs.isPackageTemporarilyUnlocked(pkg)) {
                     triggerShield(pkg, "USAGE_LIMIT_EXCEEDED")
+                } else if (prefs.isPackageBlocked(pkg, myPkg)) {
+                    val reason = prefs.getBlockReason(pkg)
+                    triggerShield(pkg, reason)
                 }
             }
 
@@ -210,6 +212,8 @@ class NyirabyoGuardianService : AccessibilityService() {
     }
 
     private fun killAppProcesses(packageName: String) {
+        val myPkg = applicationContext.packageName
+        if (packageName == myPkg) return
         if (isKeyboardOrIme(packageName)) return
         try {
             val am = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
@@ -300,6 +304,12 @@ class NyirabyoGuardianService : AccessibilityService() {
     }
 
     private fun triggerShield(packageName: String, reason: String) {
+        val myPkg = applicationContext.packageName
+        // ABSOLUTE ISOLATION: Never ever show BlockShieldActivity for NYIRABYO Life itself!
+        if (packageName == myPkg) {
+            return
+        }
+
         // Debounce: if the shield is already showing for the same package, don't re-trigger
         val now = System.currentTimeMillis()
         if (packageName == lastShieldPkg && (now - lastShieldTimeMs) < shieldDebounceMs) {

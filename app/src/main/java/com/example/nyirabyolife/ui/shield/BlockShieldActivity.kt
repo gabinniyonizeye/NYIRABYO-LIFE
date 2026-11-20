@@ -34,17 +34,23 @@ class BlockShieldActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        prefs = PreferencesManager.getInstance(this)
+        blockedPkg = intent.getStringExtra(EXTRA_PACKAGE_NAME) ?: ""
+        blockReason = intent.getStringExtra(EXTRA_BLOCK_REASON) ?: "DISTRACTION_RESTRICTED"
+
+        // ABSOLUTE ISOLATION: Never block or shield NYIRABYO Life launcher itself
+        if (blockedPkg == packageName || blockedPkg.isEmpty()) {
+            finish()
+            return
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
-            setTurnScreenOn(true)
+            // Never call setTurnScreenOn(true); the device must sleep peacefully!
         }
 
         binding = ActivityBlockShieldBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        prefs = PreferencesManager.getInstance(this)
-        blockedPkg = intent.getStringExtra(EXTRA_PACKAGE_NAME) ?: ""
-        blockReason = intent.getStringExtra(EXTRA_BLOCK_REASON) ?: "DISTRACTION_RESTRICTED"
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
