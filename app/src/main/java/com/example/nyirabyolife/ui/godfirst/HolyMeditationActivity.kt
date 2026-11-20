@@ -1,5 +1,6 @@
 package com.example.nyirabyolife.ui.godfirst
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
@@ -7,155 +8,162 @@ import android.os.CountDownTimer
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.view.LayoutInflater
+import android.view.View
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.example.nyirabyolife.R
 import com.example.nyirabyolife.data.local.NyirabyoDbHelper
-import com.example.nyirabyolife.data.model.FocusSession
+import com.example.nyirabyolife.data.model.MeditationSessionRecord
 import com.example.nyirabyolife.databinding.ActivityHolyMeditationBinding
+import com.example.nyirabyolife.databinding.ItemMeditationSessionBinding
 import com.example.nyirabyolife.util.ThemeHelper
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class HolyMeditationActivity : AppCompatActivity() {
 
-    enum class MeditationMode(
+    enum class PracticeType(
+        val practiceId: String,
         val title: String,
-        val subtitle: String,
-        val sessionKey: String
+        val purpose: String,
+        val defaultMinutes: Int,
+        val defaultAnchor: String,
+        val initialPrompt: String
     ) {
-        MORNING(
-            "MORNING DAWN MEDITATION",
-            "Awakening in God's Lovingkindness ☀️",
-            "MEDITATION_MORNING"
+        MORNING_BREATH(
+            "morning_breath",
+            "Morning Breath Awareness",
+            "Build attention and begin the day with intention",
+            3,
+            "Breath (Nose, chest or belly)",
+            "Feel one breath. When you notice your attention has wandered, gently begin again."
         ),
-        MIDDAY(
-            "MIDDAY PEACE & HABITATION",
-            "Centering in Christ's Stillness 🕊️",
-            "MEDITATION_MIDDAY"
+        GROUNDING_54321(
+            "grounding_54321",
+            "Grounding 5-4-3-2-1",
+            "Reconnect with the present when your mind feels busy",
+            2,
+            "Senses & feet on floor",
+            "There is no need to force calm. Look around slowly and notice what is here."
         ),
-        EVENING(
-            "EVENING SOLITUDE & REST",
-            "Resting in Father's Protective Care 🌙",
-            "MEDITATION_EVENING"
+        OPEN_AWARENESS(
+            "open_awareness",
+            "Open Awareness (Inner Peace)",
+            "Make room for what is here without needing to fix it",
+            5,
+            "Sitting posture & sounds",
+            "For this moment, you can make room for what is here."
         ),
-        WARFARE(
-            "SPIRITUAL WARFARE & URGE RESET",
-            "Casting Down Imaginations & Standing in Christ 🛡️",
-            "MEDITATION_WARFARE"
+        COUNTING_BREATHS(
+            "counting_breaths",
+            "Counting Breaths (Focus)",
+            "Practice returning your attention to one task",
+            3,
+            "Exhale count (1 to 5)",
+            "Each time you begin again, you are practicing attention."
         ),
-        LECTIO(
-            "LECTIO DIVINA: SACRED WORD",
-            "Contemplating the Living Scriptures 📖",
-            "MEDITATION_LECTIO"
+        COMPASSION(
+            "compassion",
+            "Compassionate Phrases",
+            "Respond to yourself with warmth and patience",
+            3,
+            "Compassionate phrases",
+            "Silently repeat a phrase that feels natural, leaving space between repetitions."
+        ),
+        BODY_SCAN(
+            "body_scan",
+            "Gentle Body Scan (Sleep)",
+            "Wind down and notice areas that might be holding tension",
+            5,
+            "Body sensations & Dim Mode",
+            "There is nothing to achieve. Allow yourself to rest."
+        ),
+        WALKING(
+            "walking",
+            "Mindful Walking (Movement)",
+            "Practice attention when sitting still doesn't feel right",
+            3,
+            "Feet touching the ground",
+            "Notice each step. When your mind wanders, gently return to the next step."
+        ),
+        SCRIPTURE(
+            "scripture",
+            "Sacred Scripture Contemplation",
+            "Lectio Divina: Contemplating the Living Word & Peace",
+            5,
+            "Living Word & Presence",
+            "Be still, and know that I am God. Rest in His lovingkindness."
         )
     }
 
-    private data class MeditationVerse(val scripture: String, val reference: String)
+    private data class GroundingStep(
+        val badge: String,
+        val instruction: String,
+        val nextLabel: String
+    )
+
+    private val groundingSteps = listOf(
+        GroundingStep("STEP 1 OF 6 • LOOK AROUND", "Look around and name 5 things you can see right now. 👁️", "Next Step (4 Things You Feel) ➔"),
+        GroundingStep("STEP 2 OF 6 • PHYSICAL TOUCH", "Notice 4 things you can feel right now (clothes, chair, air on skin). ✋", "Next Step (3 Sounds) ➔"),
+        GroundingStep("STEP 3 OF 6 • LISTEN CLOSELY", "Listen for 3 sounds around you (distant hum, clock, breathing). 👂", "Next Step (2 Smells) ➔"),
+        GroundingStep("STEP 4 OF 6 • SENSE SMELL", "Notice 2 things you can smell around you (fresh air, room scent). 👃", "Next Step (1 Taste) ➔"),
+        GroundingStep("STEP 5 OF 6 • SENSE TASTE", "Notice 1 thing you can taste, or the resting sensation of your mouth. 👅", "Next Step (Ground Your Feet) ➔"),
+        GroundingStep("STEP 6 OF 6 • SOLID SUPPORT", "Feel the solid ground beneath your feet and the support under your body. 🦶", "Complete Grounding 🕊️")
+    )
+
+    private val compassionatePhrases = listOf(
+        "“May I be kind to myself.”",
+        "“May I have patience.”",
+        "“May I find moments of ease.”",
+        "“May I be gentle with my thoughts.”"
+    )
+
+    private val bodyScanRegions = listOf(
+        "Feet & Toes 🦶",
+        "Lower Legs & Knees 🦵",
+        "Hips, Pelvis & Lower Back",
+        "Belly & Natural Breathing",
+        "Shoulders & Upper Back",
+        "Arms & Hands ✋",
+        "Neck & Softened Jaw",
+        "Eyes, Forehead & Face 😌",
+        "Entire Body at Peaceful Rest 🌙"
+    )
+
+    private data class ScriptureVerse(val scripture: String, val reference: String)
+    private val scriptureVerses = listOf(
+        ScriptureVerse("“Let the morning bring me word of your unfailing love, for I have put my trust in you. Show me the way I should go, for to you I entrust my life.”", "Psalm 143:8"),
+        ScriptureVerse("“Peace I leave with you; my peace I give to you. I do not give to you as the world gives. Do not let your hearts be troubled and do not be afraid.”", "John 14:27"),
+        ScriptureVerse("“Be still, and know that I am God! I will be honored by every nation. I will be honored throughout the world.”", "Psalm 46:10"),
+        ScriptureVerse("“Come to me, all you who are weary and burdened, and I will give you rest. Take my yoke upon you and learn from me, for I am gentle and humble in heart.”", "Matthew 11:28-29"),
+        ScriptureVerse("“In peace I will lie down and sleep, for you alone, LORD, make me dwell in safety.”", "Psalm 4:8"),
+        ScriptureVerse("“The steadfast love of the LORD never ceases; his mercies never come to an end; they are new every morning.”", "Lamentations 3:22-23"),
+        ScriptureVerse("“Remain in me, as I also remain in you. No branch can bear fruit by itself; it must remain in the vine.”", "John 15:4")
+    )
 
     private lateinit var binding: ActivityHolyMeditationBinding
     private lateinit var dbHelper: NyirabyoDbHelper
 
-    private var currentMode = MeditationMode.MORNING
-    private var selectedDurationMinutes = 5
-    private var totalMillis = 5 * 60 * 1000L
-    private var millisRemaining = 5 * 60 * 1000L
+    private var currentPractice = PracticeType.MORNING_BREATH
+    private var totalMillis = 3 * 60 * 1000L
+    private var millisRemaining = 3 * 60 * 1000L
     private var isTimerRunning = false
     private var countDownTimer: CountDownTimer? = null
-    private var currentVerseIndex = 0
 
-    private val versesByMode = mapOf(
-        MeditationMode.MORNING to listOf(
-            MeditationVerse(
-                "“Let the morning bring me word of your unfailing love, for I have put my trust in you. Show me the way I should go, for to you I entrust my life.”",
-                "Psalm 143:8"
-            ),
-            MeditationVerse(
-                "“The steadfast love of the LORD never ceases; his mercies never come to an end; they are new every morning; great is your faithfulness.”",
-                "Lamentations 3:22-23"
-            ),
-            MeditationVerse(
-                "“In the morning, LORD, you hear my voice; in the morning I lay my requests before you and wait expectantly.”",
-                "Psalm 5:3"
-            ),
-            MeditationVerse(
-                "“Awake, my soul! Awake, harp and lyre! I will awaken the dawn. I will give thanks to you, LORD, among the nations.”",
-                "Psalm 57:8-9"
-            )
-        ),
-        MeditationMode.MIDDAY to listOf(
-            MeditationVerse(
-                "“Peace I leave with you; my peace I give to you. I do not give to you as the world gives. Do not let your hearts be troubled and do not be afraid.”",
-                "John 14:27"
-            ),
-            MeditationVerse(
-                "“Be still, and know that I am God! I will be honored by every nation. I will be honored throughout the world.”",
-                "Psalm 46:10"
-            ),
-            MeditationVerse(
-                "“Remain in me, as I also remain in you. No branch can bear fruit by itself; it must remain in the vine. Neither can you bear fruit unless you remain in me.”",
-                "John 15:4"
-            ),
-            MeditationVerse(
-                "“Let the peace of Christ rule in your hearts, since as members of one body you were called to peace. And be thankful.”",
-                "Colossians 3:15"
-            )
-        ),
-        MeditationMode.EVENING to listOf(
-            MeditationVerse(
-                "“In peace I will lie down and sleep, for you alone, LORD, make me dwell in safety.”",
-                "Psalm 4:8"
-            ),
-            MeditationVerse(
-                "“Whoever dwells in the shelter of the Most High will rest in the shadow of the Almighty. I will say of the LORD, ‘He is my refuge and my fortress, my God, in whom I trust.’”",
-                "Psalm 91:1-2"
-            ),
-            MeditationVerse(
-                "“Come to me, all you who are weary and burdened, and I will give you rest. Take my yoke upon you and learn from me, for I am gentle and humble in heart.”",
-                "Matthew 11:28-29"
-            ),
-            MeditationVerse(
-                "“When you lie down, you will not be afraid; when you lie down, your sleep will be sweet.”",
-                "Proverbs 3:24"
-            )
-        ),
-        MeditationMode.WARFARE to listOf(
-            MeditationVerse(
-                "“The weapons we fight with are not the weapons of the world. On the contrary, they have divine power to demolish strongholds... and we take captive every thought to make it obedient to Christ.”",
-                "2 Corinthians 10:4-5"
-            ),
-            MeditationVerse(
-                "“Submit yourselves, then, to God. Resist the devil, and he will flee from you. Come near to God and he will come near to you.”",
-                "James 4:7-8"
-            ),
-            MeditationVerse(
-                "“No temptation has overtaken you except what is common to mankind. And God is faithful; he will not let you be tempted beyond what you can bear.”",
-                "1 Corinthians 10:13"
-            ),
-            MeditationVerse(
-                "“Put on the full armor of God, so that you can take your stand against the devil’s schemes.”",
-                "Ephesians 6:11"
-            )
-        ),
-        MeditationMode.LECTIO to listOf(
-            MeditationVerse(
-                "“Keep this Book of the Law always on your lips; meditate on it day and night, so that you may be careful to do everything written in it. Then you will be prosperous and successful.”",
-                "Joshua 1:8"
-            ),
-            MeditationVerse(
-                "“Blessed is the one whose delight is in the law of the LORD, and who meditates on his law day and night. That person is like a tree planted by streams of water.”",
-                "Psalm 1:2-3"
-            ),
-            MeditationVerse(
-                "“Let the message of Christ dwell among you richly as you teach and admonish one another with all wisdom through psalms, hymns, and songs from the Spirit.”",
-                "Colossians 3:16"
-            ),
-            MeditationVerse(
-                "“Your word is a lamp for my feet, a light on my path.”",
-                "Psalm 119:105"
-            )
-        )
-    )
+    // Specialized Practice States
+    private var groundingStepIndex = 0
+    private var breathCount = 1
+    private var compassionateIndex = 0
+    private var bodyScanIndex = 0
+    private var scriptureIndex = 0
+    private var isDimMode = false
+    private var selectedPreMood = "😌 Calm"
+    private var selectedPostMood = "😌 Calm"
+    private var lastRecordedSessionId: Long = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -164,230 +172,443 @@ class HolyMeditationActivity : AppCompatActivity() {
 
         dbHelper = NyirabyoDbHelper.getInstance(this)
 
-        binding.btnBack.setOnClickListener { finish() }
+        setupTheme()
+        setupTopTabs()
+        setupTodayLaunchers()
+        setupPracticesLaunchers()
+        setupSessionPlayerControls()
+        setupPostSessionControls()
+        refreshJournalStats()
 
+        binding.btnBack.setOnClickListener { finish() }
+    }
+
+    private fun setupTheme() {
         val themeColors = ThemeHelper.getActiveThemeColors(this)
         binding.tvMeditationHeaderTitle.setTextColor(themeColors.primaryAccent)
-        binding.btnNextVerse.setTextColor(themeColors.secondaryAccent)
-        val startPill = ThemeHelper.createPillDrawable(this, themeColors)
-        startPill.setColor(themeColors.primaryAccent)
-        binding.btnStartMeditation.background = startPill
-        binding.btnStartMeditation.setTextColor(ContextCompat.getColor(this, R.color.bg_dark))
-        binding.cardScriptureMeditation.background = ThemeHelper.createCardDrawable(this, themeColors, isElevated = true)
+        binding.tvMeditationHeaderSubtitle.setTextColor(ContextCompat.getColor(this, R.color.text_tertiary))
+    }
 
-        setupModeTabs()
-        setupDurationPills()
-        switchMode(MeditationMode.MORNING)
+    // ================= TOP TABS NAVIGATION =================
+    private fun setupTopTabs() {
+        val tabs = listOf(
+            Triple(binding.tabToday, binding.layoutTodayTab, "TODAY"),
+            Triple(binding.tabPractices, binding.layoutPracticesTab, "PRACTICES"),
+            Triple(binding.tabLearn, binding.layoutLearnTab, "LEARN"),
+            Triple(binding.tabJournal, binding.layoutJournalTab, "JOURNAL")
+        )
 
-        binding.btnNextVerse.setOnClickListener {
-            val list = versesByMode[currentMode] ?: emptyList()
-            if (list.isNotEmpty()) {
-                currentVerseIndex = (currentVerseIndex + 1) % list.size
-                showCurrentVerse()
+        for ((tabView, _, _) in tabs) {
+            tabView.setOnClickListener {
+                switchTab(tabView)
             }
         }
+    }
 
-        binding.btnStartMeditation.setOnClickListener {
-            if (isTimerRunning) {
-                pauseMeditation()
+    private fun switchTab(activeTab: TextView) {
+        val themeColors = ThemeHelper.getActiveThemeColors(this)
+        val tabs = listOf(
+            Pair(binding.tabToday, binding.layoutTodayTab),
+            Pair(binding.tabPractices, binding.layoutPracticesTab),
+            Pair(binding.tabLearn, binding.layoutLearnTab),
+            Pair(binding.tabJournal, binding.layoutJournalTab)
+        )
+
+        for ((tabView, container) in tabs) {
+            if (tabView == activeTab) {
+                tabView.setTextColor(themeColors.primaryAccent)
+                tabView.setBackgroundResource(R.drawable.card_background_elevated)
+                container.visibility = View.VISIBLE
             } else {
-                startMeditation()
-            }
-        }
-    }
-
-    private fun setupModeTabs() {
-        val tabMap = listOf(
-            Pair(binding.tabModeMorning, MeditationMode.MORNING),
-            Pair(binding.tabModeMidday, MeditationMode.MIDDAY),
-            Pair(binding.tabModeEvening, MeditationMode.EVENING),
-            Pair(binding.tabModeWarfare, MeditationMode.WARFARE),
-            Pair(binding.tabModeLectio, MeditationMode.LECTIO)
-        )
-
-        for ((view, mode) in tabMap) {
-            view.setOnClickListener {
-                if (currentMode != mode) {
-                    if (isTimerRunning) pauseMeditation()
-                    switchMode(mode)
-                }
-            }
-        }
-    }
-
-    private fun switchMode(mode: MeditationMode) {
-        currentMode = mode
-        currentVerseIndex = 0
-
-        // Highlight active tab
-        val tabMap = listOf(
-            Pair(binding.tabModeMorning, MeditationMode.MORNING),
-            Pair(binding.tabModeMidday, MeditationMode.MIDDAY),
-            Pair(binding.tabModeEvening, MeditationMode.EVENING),
-            Pair(binding.tabModeWarfare, MeditationMode.WARFARE),
-            Pair(binding.tabModeLectio, MeditationMode.LECTIO)
-        )
-
-        val themeColors = ThemeHelper.getActiveThemeColors(this)
-        for ((view, m) in tabMap) {
-            if (m == mode) {
-                view.setTextColor(themeColors.primaryAccent)
-                view.setBackgroundResource(R.drawable.card_background_elevated)
-            } else {
-                view.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
-                view.setBackgroundResource(R.drawable.pill_background)
+                tabView.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+                tabView.setBackgroundResource(R.drawable.pill_background)
+                container.visibility = View.GONE
             }
         }
 
-        binding.tvMeditationHeaderTitle.text = mode.title
-        binding.tvMeditationHeaderSubtitle.text = mode.subtitle
-
-        showCurrentVerse()
-        updateBreathPhase(millisRemaining)
-    }
-
-    private fun showCurrentVerse() {
-        val list = versesByMode[currentMode] ?: emptyList()
-        val themeColors = ThemeHelper.getActiveThemeColors(this)
-        if (list.isNotEmpty()) {
-            val v = list[currentVerseIndex.coerceIn(0, list.size - 1)]
-            binding.tvMeditationVerse.text = v.scripture
-            binding.tvMeditationRef.text = v.reference
-            binding.tvMeditationRef.setTextColor(themeColors.primaryAccent)
+        if (activeTab == binding.tabJournal) {
+            refreshJournalStats()
         }
     }
 
-    private fun setupDurationPills() {
-        val pills = listOf(
-            Triple(binding.btnDur3, 3, 3 * 60 * 1000L),
-            Triple(binding.btnDur5, 5, 5 * 60 * 1000L),
-            Triple(binding.btnDur10, 10, 10 * 60 * 1000L),
-            Triple(binding.btnDur15, 15, 15 * 60 * 1000L)
-        )
-
-        for ((view, mins, millis) in pills) {
-            view.setOnClickListener {
-                if (isTimerRunning) pauseMeditation()
-
-                selectedDurationMinutes = mins
-                totalMillis = millis
-                millisRemaining = millis
-                updateTimerDisplay(millisRemaining)
-
-                val themeColors = ThemeHelper.getActiveThemeColors(this@HolyMeditationActivity)
-                for ((v, m, _) in pills) {
-                    if (m == mins) {
-                        v.setTextColor(themeColors.primaryAccent)
-                        v.setBackgroundResource(R.drawable.card_background_elevated)
-                    } else {
-                        v.setTextColor(ContextCompat.getColor(this@HolyMeditationActivity, R.color.text_secondary))
-                        v.setBackgroundResource(R.drawable.pill_background)
-                    }
-                }
-            }
+    // ================= TODAY TAB LAUNCHERS =================
+    private fun setupTodayLaunchers() {
+        binding.btnStartMorning.setOnClickListener {
+            launchSession(PracticeType.MORNING_BREATH, durationMinutes = 3)
+        }
+        binding.btnStartAfternoon.setOnClickListener {
+            launchSession(PracticeType.GROUNDING_54321, durationMinutes = 2)
+        }
+        binding.btnStartSleep.setOnClickListener {
+            launchSession(PracticeType.BODY_SCAN, durationMinutes = 5, startWithDim = true)
         }
     }
 
-    private fun startMeditation() {
-        val themeColors = ThemeHelper.getActiveThemeColors(this)
+    // ================= PRACTICES TAB LAUNCHERS =================
+    private fun setupPracticesLaunchers() {
+        binding.btnLaunchBreath.setOnClickListener { launchSession(PracticeType.MORNING_BREATH, 3) }
+        binding.btnLaunchGrounding.setOnClickListener { launchSession(PracticeType.GROUNDING_54321, 2) }
+        binding.btnLaunchOpenAwareness.setOnClickListener { launchSession(PracticeType.OPEN_AWARENESS, 5) }
+        binding.btnLaunchCounting.setOnClickListener { launchSession(PracticeType.COUNTING_BREATHS, 3) }
+        binding.btnLaunchCompassion.setOnClickListener { launchSession(PracticeType.COMPASSION, 3) }
+        binding.btnLaunchBodyScan.setOnClickListener { launchSession(PracticeType.BODY_SCAN, 5, startWithDim = true) }
+        binding.btnLaunchWalking.setOnClickListener { launchSession(PracticeType.WALKING, 3) }
+        binding.btnLaunchScripture.setOnClickListener { launchSession(PracticeType.SCRIPTURE, 5) }
+    }
+
+    // ================= SESSION PLAYER ORCHESTRATION =================
+    private fun launchSession(practice: PracticeType, durationMinutes: Int, startWithDim: Boolean = false) {
+        currentPractice = practice
+        totalMillis = durationMinutes * 60 * 1000L
+        millisRemaining = totalMillis
+        groundingStepIndex = 0
+        breathCount = 1
+        compassionateIndex = 0
+        bodyScanIndex = 0
+        scriptureIndex = 0
+        isDimMode = startWithDim
+        updateDimOverlay()
+
+        binding.tvPlayerTitle.text = practice.title.uppercase(Locale.getDefault())
+        binding.tvPlayerPurpose.text = practice.purpose
+        binding.tvPlayerGuidance.text = practice.initialPrompt
+        binding.tvPlayerAnchorNotice.text = "Anchor: ${practice.defaultAnchor} • Whisper 'thinking' if mind wanders"
+        updateTimerDisplay(millisRemaining)
+
+        // Configure Specialized UI Modules
+        binding.moduleGrounding.visibility = if (practice == PracticeType.GROUNDING_54321) View.VISIBLE else View.GONE
+        binding.moduleCounting.visibility = if (practice == PracticeType.COUNTING_BREATHS) View.VISIBLE else View.GONE
+        binding.moduleScripture.visibility = if (practice == PracticeType.SCRIPTURE) View.VISIBLE else View.GONE
+
+        if (practice == PracticeType.GROUNDING_54321) {
+            updateGroundingStepUI()
+        } else if (practice == PracticeType.COUNTING_BREATHS) {
+            binding.btnCountTap.text = "Exhaled: Count (1 / 5) 🎯"
+        } else if (practice == PracticeType.SCRIPTURE) {
+            updateScriptureUI()
+        }
+
+        // Show player, hide main scroll
+        binding.scrollMainContent.visibility = View.GONE
+        binding.scrollTabs.visibility = View.GONE
+        binding.headerMeditation.visibility = View.GONE
+        binding.layoutSessionPlayer.visibility = View.VISIBLE
+
+        startSessionTimer()
+    }
+
+    private fun startSessionTimer() {
         isTimerRunning = true
-        binding.btnStartMeditation.text = "Pause Meditation ⏸️"
-        binding.btnStartMeditation.setBackgroundColor(ContextCompat.getColor(this, R.color.bg_card_elevated))
-        binding.btnStartMeditation.setTextColor(themeColors.primaryAccent)
+        binding.btnPlayerPause.text = "Pause ⏸️"
 
         countDownTimer?.cancel()
         countDownTimer = object : CountDownTimer(millisRemaining, 1000L) {
             override fun onTick(msUntilFinished: Long) {
                 millisRemaining = msUntilFinished
                 updateTimerDisplay(msUntilFinished)
-                updateBreathPhase(msUntilFinished)
+                updateDynamicGuidance(msUntilFinished)
             }
 
             override fun onFinish() {
-                completeMeditation()
+                completeSession()
             }
         }.start()
     }
 
-    private fun pauseMeditation() {
-        val themeColors = ThemeHelper.getActiveThemeColors(this)
+    private fun pauseSessionTimer() {
         isTimerRunning = false
         countDownTimer?.cancel()
-        binding.btnStartMeditation.text = "Resume Holy Meditation 🕊️"
-        binding.btnStartMeditation.setBackgroundColor(themeColors.primaryAccent)
-        binding.btnStartMeditation.setTextColor(ContextCompat.getColor(this, R.color.bg_dark))
-        binding.tvBreathPrompt.text = "Meditation Paused • Rest in Grace"
-    }
-
-    private fun completeMeditation() {
-        val themeColors = ThemeHelper.getActiveThemeColors(this)
-        isTimerRunning = false
-        millisRemaining = totalMillis
-        updateTimerDisplay(millisRemaining)
-
-        binding.btnStartMeditation.text = "Begin Holy Meditation 🕊️"
-        binding.btnStartMeditation.setBackgroundColor(themeColors.primaryAccent)
-        binding.btnStartMeditation.setTextColor(ContextCompat.getColor(this, R.color.bg_dark))
-        binding.tvBreathPrompt.text = "Amen • Abiding in His Peace"
-
-        // Log session in focus sessions database
-        dbHelper.addFocusSession(
-            FocusSession(
-                sessionType = currentMode.sessionKey,
-                durationMinutes = selectedDurationMinutes,
-                timestamp = System.currentTimeMillis(),
-                isCompleted = true
-            )
-        )
-
-        vibratePeaceChime()
-        Toast.makeText(this, "🕊️ ${currentMode.title} Complete. Walk in Christ's peace.", Toast.LENGTH_LONG).show()
+        binding.btnPlayerPause.text = "Resume ▶️"
+        binding.tvPlayerGuidance.text = "Practice Paused • Rest in Grace"
     }
 
     private fun updateTimerDisplay(millis: Long) {
         val totalSecs = (millis / 1000).toInt()
         val mins = totalSecs / 60
         val secs = totalSecs % 60
-        binding.tvTimerDisplay.text = "%02d:%02d".format(mins, secs)
+        binding.tvPlayerTimer.text = "%02d:%02d".format(mins, secs)
     }
 
-    private fun updateBreathPhase(millis: Long) {
-        val elapsedSec = ((totalMillis - millis) / 1000).toInt()
-        val cycleSec = elapsedSec % 18 // 18s breath cycle
+    private fun updateDynamicGuidance(millisRemaining: Long) {
+        val elapsedSec = ((totalMillis - millisRemaining) / 1000).toInt()
 
-        val prompt = when (currentMode) {
-            MeditationMode.MORNING -> when {
-                cycleSec < 6 -> "Inhale Awakening Grace ☀️ (6s)"
-                cycleSec < 9 -> "Hold & Align Mind with Purpose ⚓ (3s)"
-                cycleSec < 15 -> "Exhale Sluggishness & Doubts 🕊️ (6s)"
-                else -> "Rest in His Morning Mercies 👑 (3s)"
+        when (currentPractice) {
+            PracticeType.MORNING_BREATH -> {
+                val cycleSec = elapsedSec % 16
+                binding.tvPlayerGuidance.text = when {
+                    cycleSec < 5 -> "Feel the breath entering naturally..."
+                    cycleSec < 7 -> "Rest with the breath..."
+                    cycleSec < 12 -> "Feel the gentle exhale..."
+                    else -> "When your mind wanders, gently whisper 'thinking' and return."
+                }
             }
-            MeditationMode.MIDDAY -> when {
-                cycleSec < 6 -> "Inhale Christ's Stillness & Peace 🕊️ (6s)"
-                cycleSec < 9 -> "Hold & Abide in the Vine ⚓ (3s)"
-                cycleSec < 15 -> "Exhale Daytime Stress & Noise 🌿 (6s)"
-                else -> "Rest in the Living Sanctuary 👑 (3s)"
+            PracticeType.COMPASSION -> {
+                val phraseIdx = (elapsedSec / 15) % compassionatePhrases.size
+                binding.tvPlayerGuidance.text = compassionatePhrases[phraseIdx]
             }
-            MeditationMode.EVENING -> when {
-                cycleSec < 6 -> "Inhale Shalom Peace & Safety 🌙 (6s)"
-                cycleSec < 9 -> "Hold in Father's Protective Wings ⚓ (3s)"
-                cycleSec < 15 -> "Exhale the Burdens of the Day 🕊️ (6s)"
-                else -> "Sleep in Christ's Embracing Love 👑 (3s)"
+            PracticeType.BODY_SCAN -> {
+                val regionIdx = (elapsedSec / 35).coerceIn(0, bodyScanRegions.size - 1)
+                binding.tvPlayerGuidance.text = "Bring gentle awareness to: ${bodyScanRegions[regionIdx]}"
+                binding.tvPlayerAnchorNotice.text = "Notice whatever sensation is there without forcing change."
             }
-            MeditationMode.WARFARE -> when {
-                cycleSec < 6 -> "Inhale the Holy Spirit & Authority 🛡️ (6s)"
-                cycleSec < 9 -> "Hold & Cast Down Intrusive Thoughts ⚓ (3s)"
-                cycleSec < 15 -> "Exhale Temptation, Urges & Fear 🔥 (6s)"
-                else -> "Stand Victorious in Christ Jesus 👑 (3s)"
+            PracticeType.OPEN_AWARENESS -> {
+                val cycle = (elapsedSec / 20) % 3
+                binding.tvPlayerGuidance.text = when (cycle) {
+                    0 -> "Notice sounds and sensations coming and going..."
+                    1 -> "When something catches attention: silently name 'sound', 'thought', or 'feeling'."
+                    else -> "For this moment, make room for whatever is here."
+                }
             }
-            MeditationMode.LECTIO -> when {
-                cycleSec < 6 -> "Inhale the Living Breath of the Word 📖 (6s)"
-                cycleSec < 9 -> "Hold & Savor the Scripture ⚓ (3s)"
-                cycleSec < 15 -> "Exhale Worldly Distractions 🕊️ (6s)"
-                else -> "Let the Word Take Deep Root 👑 (3s)"
+            PracticeType.WALKING -> {
+                val stepCycle = elapsedSec % 12
+                binding.tvPlayerGuidance.text = if (stepCycle < 6) {
+                    "Notice feet lifting, moving, and touching the ground."
+                } else {
+                    "When your mind wanders, gently return to the next step."
+                }
+            }
+            else -> {}
+        }
+    }
+
+    // Specialized Grounding Steps
+    private fun updateGroundingStepUI() {
+        if (groundingStepIndex in groundingSteps.indices) {
+            val step = groundingSteps[groundingStepIndex]
+            binding.tvGroundingStepBadge.text = step.badge
+            binding.tvGroundingInstruction.text = step.instruction
+            binding.btnNextGroundingStep.text = step.nextLabel
+        }
+    }
+
+    // Specialized Scripture UI
+    private fun updateScriptureUI() {
+        if (scriptureVerses.isNotEmpty()) {
+            val v = scriptureVerses[scriptureIndex.coerceIn(0, scriptureVerses.size - 1)]
+            binding.tvPlayerScriptureVerse.text = v.scripture
+            binding.tvPlayerScriptureRef.text = v.reference
+        }
+    }
+
+    // Session Player Controls
+    private fun setupSessionPlayerControls() {
+        binding.btnPlayerPause.setOnClickListener {
+            if (isTimerRunning) {
+                pauseSessionTimer()
+            } else {
+                startSessionTimer()
             }
         }
-        binding.tvBreathPrompt.text = prompt
+
+        binding.btnPlayerFinish.setOnClickListener {
+            completeSession()
+        }
+
+        binding.btnPlayerExit.setOnClickListener {
+            exitPlayerToSanctuary()
+        }
+
+        // Emergency Grounding button
+        binding.btnEmergencyGround.setOnClickListener {
+            pauseSessionTimer()
+            Toast.makeText(
+                this,
+                "Take a pause. Open your eyes, look around, and feel your feet on the floor. There is no rush 🌿",
+                Toast.LENGTH_LONG
+            ).show()
+            exitPlayerToSanctuary()
+        }
+
+        // Grounding Next Step Button
+        binding.btnNextGroundingStep.setOnClickListener {
+            groundingStepIndex++
+            if (groundingStepIndex < groundingSteps.size) {
+                updateGroundingStepUI()
+            } else {
+                completeSession()
+            }
+        }
+
+        // Counting Breaths Counter
+        binding.btnCountTap.setOnClickListener {
+            breathCount++
+            if (breathCount > 5) breathCount = 1
+            binding.btnCountTap.text = "Exhaled: Count ($breathCount / 5) 🎯"
+            binding.tvPlayerGuidance.text = "Exhale counted: $breathCount"
+            vibrateSubtleTick()
+        }
+
+        binding.btnCountReset.setOnClickListener {
+            breathCount = 1
+            binding.btnCountTap.text = "Exhaled: Count (1 / 5) 🎯"
+            binding.tvPlayerGuidance.text = "Reset to 1 • Returning IS the practice"
+        }
+
+        // Scripture next verse
+        binding.btnPlayerNextVerse.setOnClickListener {
+            scriptureIndex = (scriptureIndex + 1) % scriptureVerses.size
+            updateScriptureUI()
+        }
+
+        // Dim Mode Toggle
+        binding.btnDimToggle.setOnClickListener {
+            isDimMode = !isDimMode
+            updateDimOverlay()
+        }
+
+        // Anchor Switchers
+        binding.btnAnchorBreath.setOnClickListener {
+            binding.tvPlayerAnchorNotice.text = "Anchor: Breath in nose/chest • Return gently when wandering"
+            highlightAnchor(binding.btnAnchorBreath)
+        }
+        binding.btnAnchorSound.setOnClickListener {
+            binding.tvPlayerAnchorNotice.text = "Anchor: Ambient room sounds • Let them rise and fall"
+            highlightAnchor(binding.btnAnchorSound)
+        }
+        binding.btnAnchorFeet.setOnClickListener {
+            binding.tvPlayerAnchorNotice.text = "Anchor: Sensation of feet on the floor • Grounded & supported"
+            highlightAnchor(binding.btnAnchorFeet)
+        }
+    }
+
+    private fun highlightAnchor(activeView: TextView) {
+        val themeColors = ThemeHelper.getActiveThemeColors(this)
+        val anchors = listOf(binding.btnAnchorBreath, binding.btnAnchorSound, binding.btnAnchorFeet)
+        for (v in anchors) {
+            if (v == activeView) {
+                v.setTextColor(themeColors.primaryAccent)
+                v.setBackgroundResource(R.drawable.card_background_elevated)
+            } else {
+                v.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+                v.setBackgroundResource(R.drawable.pill_background)
+            }
+        }
+    }
+
+    private fun updateDimOverlay() {
+        binding.dimOverlayView.visibility = if (isDimMode) View.VISIBLE else View.GONE
+        binding.btnDimToggle.setTextColor(
+            if (isDimMode) ContextCompat.getColor(this, R.color.gold_primary)
+            else ContextCompat.getColor(this, R.color.text_secondary)
+        )
+    }
+
+    private fun completeSession() {
+        countDownTimer?.cancel()
+        isTimerRunning = false
+
+        val durationMinutes = ((totalMillis - millisRemaining) / 1000 / 60).toInt().coerceAtLeast(1)
+
+        // Save session record
+        val record = MeditationSessionRecord(
+            practiceId = currentPractice.practiceId,
+            practiceName = currentPractice.title,
+            durationMinutes = durationMinutes,
+            timestamp = System.currentTimeMillis(),
+            note = "",
+            preMood = selectedPreMood,
+            postMood = selectedPostMood,
+            isCompleted = true
+        )
+        lastRecordedSessionId = dbHelper.addMeditationRecord(record)
+
+        if (!isDimMode) {
+            vibratePeaceChime()
+        }
+
+        // Show Reflection Modal
+        binding.tvPostSessionCompletedSummary.text = "Well done practicing attention today with ${currentPractice.title} (${durationMinutes}m)."
+        binding.layoutSessionPlayer.visibility = View.GONE
+        binding.layoutPostSessionModal.visibility = View.VISIBLE
+    }
+
+    private fun exitPlayerToSanctuary() {
+        countDownTimer?.cancel()
+        isTimerRunning = false
+        binding.layoutSessionPlayer.visibility = View.GONE
+        binding.layoutPostSessionModal.visibility = View.GONE
+        binding.scrollMainContent.visibility = View.VISIBLE
+        binding.scrollTabs.visibility = View.VISIBLE
+        binding.headerMeditation.visibility = View.VISIBLE
+        refreshJournalStats()
+    }
+
+    // ================= POST-SESSION REFLECTION MODAL =================
+    private fun setupPostSessionControls() {
+        val moods = listOf(
+            Pair(binding.moodCalm, "😌 Calm"),
+            Pair(binding.moodGrounded, "🌿 Grounded"),
+            Pair(binding.moodPeaceful, "🕊️ Peaceful"),
+            Pair(binding.moodTired, "🥱 Sleepy"),
+            Pair(binding.moodNeutral, "😐 Neutral")
+        )
+
+        for ((view, mood) in moods) {
+            view.setOnClickListener {
+                selectedPostMood = mood
+                for ((v, _) in moods) {
+                    if (v == view) {
+                        v.setTextColor(ContextCompat.getColor(this, R.color.gold_primary))
+                        v.setBackgroundResource(R.drawable.card_background_elevated)
+                    } else {
+                        v.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+                        v.setBackgroundResource(R.drawable.pill_background)
+                    }
+                }
+            }
+        }
+
+        binding.btnSaveReflection.setOnClickListener {
+            val note = binding.etReflectionNote.text.toString().trim()
+            if (lastRecordedSessionId > 0 && note.isNotEmpty()) {
+                dbHelper.updateMeditationNote(lastRecordedSessionId, note, selectedPostMood)
+            }
+            binding.etReflectionNote.text.clear()
+            exitPlayerToSanctuary()
+            Toast.makeText(this, "🕊️ Session saved to My Practice. Walk in peace.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // ================= MY PRACTICE JOURNAL STATS =================
+    private fun refreshJournalStats() {
+        val daysThisWeek = dbHelper.getMeditationDaysThisWeek()
+        val totalMinutes = dbHelper.getTotalMeditationMinutes()
+
+        binding.tvDaysPracticed.text = "$daysThisWeek / 7 Days"
+        binding.tvTotalMindfulMinutes.text = "$totalMinutes Mins"
+
+        val records = dbHelper.getMeditationRecords(30)
+        binding.layoutCompletedSessionsList.removeAllViews()
+
+        if (records.isEmpty()) {
+            binding.tvEmptyJournal.visibility = View.VISIBLE
+            binding.layoutCompletedSessionsList.visibility = View.GONE
+        } else {
+            binding.tvEmptyJournal.visibility = View.GONE
+            binding.layoutCompletedSessionsList.visibility = View.VISIBLE
+
+            val dateFormat = SimpleDateFormat("MMM d • h:mm a", Locale.getDefault())
+            for (rec in records) {
+                val itemBinding = ItemMeditationSessionBinding.inflate(
+                    LayoutInflater.from(this),
+                    binding.layoutCompletedSessionsList,
+                    false
+                )
+                itemBinding.tvItemPracticeTitle.text = rec.practiceName
+                itemBinding.tvItemDuration.text = "${rec.durationMinutes} min"
+                itemBinding.tvItemTimestamp.text = dateFormat.format(Date(rec.timestamp))
+                itemBinding.tvItemMood.text = if (rec.postMood.isNotEmpty()) rec.postMood else "🕊️ Completed"
+
+                if (rec.note.isNotEmpty()) {
+                    itemBinding.tvItemNote.visibility = View.VISIBLE
+                    itemBinding.tvItemNote.text = "“${rec.note}”"
+                } else {
+                    itemBinding.tvItemNote.visibility = View.GONE
+                }
+
+                binding.layoutCompletedSessionsList.addView(itemBinding.root)
+            }
+        }
     }
 
     private fun vibratePeaceChime() {
@@ -402,6 +623,15 @@ class HolyMeditationActivity : AppCompatActivity() {
                 val v = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
                 @Suppress("DEPRECATION")
                 v?.vibrate(longArrayOf(0, 150, 100, 250), -1)
+            }
+        } catch (_: Exception) {}
+    }
+
+    private fun vibrateSubtleTick() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val v = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                v?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
             }
         } catch (_: Exception) {}
     }

@@ -2,15 +2,24 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rootMeditationLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_dark">
 
-    <!-- Ambient Breathing Background -->
+    <!-- Ambient Glowing Background -->
     <com.example.nyirabyolife.ui.home.AmbientGlowView
         android:id="@+id/meditationAmbientGlow"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
+
+    <!-- Dimming Overlay for Sleep Mode -->
+    <View
+        android:id="@+id/dimOverlayView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#E6000000"
+        android:visibility="gone" />
 
     <!-- Top Header -->
     <LinearLayout
@@ -21,7 +30,7 @@
         android:gravity="center_vertical"
         android:paddingHorizontal="20dp"
         android:paddingTop="24dp"
-        android:paddingBottom="8dp"
+        android:paddingBottom="6dp"
         app:layout_constraintTop_toTopOf="parent">
 
         <ImageButton
@@ -45,304 +54,1630 @@
                 android:id="@+id/tvMeditationHeaderTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="HOLY MEDITATION"
+                android:text="MEDITATION SANCTUARY"
                 android:textColor="@color/gold_primary"
                 android:textSize="14sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.14" />
+                android:letterSpacing="0.12" />
 
             <TextView
                 android:id="@+id/tvMeditationHeaderSubtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="ABIDING IN CHRIST'S PRESENCE"
+                android:text="NOTICE • RETURN • REST"
                 android:textColor="@color/text_tertiary"
                 android:textSize="10sp"
                 android:letterSpacing="0.08" />
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Horizontal Meditation Mode Selector (Morning, Midday, Evening, Warfare, Lectio) -->
+    <!-- Top Navigation Tabs (Today, Practices, Learn, My Practice) -->
     <HorizontalScrollView
-        android:id="@+id/scrollModes"
+        android:id="@+id/scrollTabs"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:scrollbars="none"
         android:overScrollMode="never"
         android:paddingHorizontal="16dp"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="6dp"
         app:layout_constraintTop_toBottomOf="@id/headerMeditation">
 
         <LinearLayout
-            android:id="@+id/layoutModesContainer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
             <TextView
-                android:id="@+id/tabModeMorning"
+                android:id="@+id/tabToday"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
+                android:layout_height="36dp"
                 android:gravity="center"
                 android:paddingHorizontal="14dp"
-                android:text="🌅 Morning Dawn"
+                android:text="🌅 Today"
                 android:textColor="@color/gold_primary"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:textStyle="bold"
                 android:background="@drawable/card_background_elevated"
                 android:layout_marginEnd="8dp" />
 
             <TextView
-                android:id="@+id/tabModeMidday"
+                android:id="@+id/tabPractices"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
+                android:layout_height="36dp"
                 android:gravity="center"
                 android:paddingHorizontal="14dp"
-                android:text="☀️ Midday Peace"
+                android:text="🌿 Practices"
                 android:textColor="@color/text_secondary"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:textStyle="bold"
                 android:background="@drawable/pill_background"
                 android:layout_marginEnd="8dp" />
 
             <TextView
-                android:id="@+id/tabModeEvening"
+                android:id="@+id/tabLearn"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
+                android:layout_height="36dp"
                 android:gravity="center"
                 android:paddingHorizontal="14dp"
-                android:text="🌙 Evening Rest"
+                android:text="📖 4-Week Program"
                 android:textColor="@color/text_secondary"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:textStyle="bold"
                 android:background="@drawable/pill_background"
                 android:layout_marginEnd="8dp" />
 
             <TextView
-                android:id="@+id/tabModeWarfare"
+                android:id="@+id/tabJournal"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
+                android:layout_height="36dp"
                 android:gravity="center"
                 android:paddingHorizontal="14dp"
-                android:text="🛡️ Warfare &amp; Urge Reset"
+                android:text="🕊️ My Practice"
                 android:textColor="@color/text_secondary"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:background="@drawable/pill_background"
-                android:layout_marginEnd="8dp" />
-
-            <TextView
-                android:id="@+id/tabModeLectio"
-                android:layout_width="wrap_content"
-                android:layout_height="34dp"
-                android:gravity="center"
-                android:paddingHorizontal="14dp"
-                android:text="📖 Lectio Divina"
-                android:textColor="@color/text_secondary"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:textStyle="bold"
                 android:background="@drawable/pill_background" />
         </LinearLayout>
     </HorizontalScrollView>
 
-    <!-- Central Sacred Breathing Aura -->
-    <com.example.nyirabyolife.ui.godfirst.SpiritualAuraView
-        android:id="@+id/auraMeditation"
-        android:layout_width="220dp"
-        android:layout_height="220dp"
-        app:layout_constraintTop_toBottomOf="@id/scrollModes"
-        app:layout_constraintBottom_toTopOf="@id/cardScriptureMeditation"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <!-- Breath Guidance & Timer overlaid in Center -->
-    <LinearLayout
-        android:id="@+id/layoutBreathCenter"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center"
-        app:layout_constraintTop_toTopOf="@id/auraMeditation"
-        app:layout_constraintBottom_toBottomOf="@id/auraMeditation"
-        app:layout_constraintStart_toStartOf="@id/auraMeditation"
-        app:layout_constraintEnd_toEndOf="@id/auraMeditation">
-
-        <TextView
-            android:id="@+id/tvTimerDisplay"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="05:00"
-            android:textColor="@color/text_primary"
-            android:textSize="34sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.04" />
-
-        <TextView
-            android:id="@+id/tvBreathPrompt"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="Inhale God's Grace"
-            android:textColor="@color/gold_primary"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.06"
-            android:gravity="center" />
-    </LinearLayout>
-
-    <!-- Scripture Contemplation Card -->
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/cardScriptureMeditation"
+    <!-- Main Scrollable Content Area -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scrollMainContent"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="20dp"
-        android:layout_marginBottom="12dp"
-        android:background="@drawable/card_background_elevated"
-        android:padding="14dp"
-        app:layout_constraintBottom_toTopOf="@id/layoutDurationPills">
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        android:overScrollMode="never"
+        android:layout_marginTop="8dp"
+        app:layout_constraintTop_toBottomOf="@id/scrollTabs"
+        app:layout_constraintBottom_toBottomOf="parent">
 
-        <ImageView
-            android:id="@+id/ivSparkleMed"
-            android:layout_width="14dp"
-            android:layout_height="14dp"
-            android:src="@drawable/ic_sparkle"
-            app:tint="@color/gold_primary"
-            android:contentDescription="Light"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
-
-        <TextView
-            android:id="@+id/lblMeditationHeader"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:text="SCRIPTURE TO CONTEMPLATE"
-            android:textColor="@color/gold_primary"
-            android:textSize="9sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.12"
-            app:layout_constraintTop_toTopOf="@id/ivSparkleMed"
-            app:layout_constraintBottom_toBottomOf="@id/ivSparkleMed"
-            app:layout_constraintStart_toEndOf="@id/ivSparkleMed" />
+            android:orientation="vertical"
+            android:paddingHorizontal="18dp"
+            android:paddingBottom="40dp">
 
-        <TextView
-            android:id="@+id/tvMeditationVerse"
-            android:layout_width="0dp"
+            <!-- ================= TAB 1: TODAY ================= -->
+            <LinearLayout
+                android:id="@+id/layoutTodayTab"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Foundational Skill Banner -->
+                <LinearLayout
+                    android:id="@+id/cardFoundationalSkill"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background_elevated"
+                    android:padding="16dp"
+                    android:layout_marginBottom="14dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:src="@drawable/ic_sparkle"
+                            app:tint="@color/gold_primary" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="THE FOUNDATIONAL SKILL"
+                            android:textColor="@color/gold_primary"
+                            android:textSize="10sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.12" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Notice where your attention is, and gently bring it back when it wanders. You don't need to empty your mind or force calm. Returning IS the practice."
+                        android:textColor="@color/text_primary"
+                        android:textSize="12sp"
+                        android:lineSpacingExtra="3dp" />
+                </LinearLayout>
+
+                <!-- Morning Routine Card -->
+                <LinearLayout
+                    android:id="@+id/cardRoutineMorning"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="16dp"
+                    android:layout_marginBottom="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="🌅 Morning Attention"
+                            android:textColor="@color/gold_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="3–5 MIN"
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="10sp"
+                            android:textStyle="bold"
+                            android:background="@drawable/pill_background"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="3dp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Build attention and begin the day with intention. Focus gently on breath or sounds."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp" />
+
+                    <Button
+                        android:id="@+id/btnStartMorning"
+                        android:layout_width="match_parent"
+                        android:layout_height="40dp"
+                        android:layout_marginTop="12dp"
+                        android:text="Begin Morning Practice (3m) 🕊️"
+                        android:textColor="@color/bg_dark"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:backgroundTint="@color/gold_primary"
+                        app:cornerRadius="10dp" />
+                </LinearLayout>
+
+                <!-- Afternoon Reset Card -->
+                <LinearLayout
+                    android:id="@+id/cardRoutineAfternoon"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="16dp"
+                    android:layout_marginBottom="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="☀️ Afternoon Reset"
+                            android:textColor="@color/emerald_accent"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="2–3 MIN"
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="10sp"
+                            android:textStyle="bold"
+                            android:background="@drawable/pill_background"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="3dp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Take a 2–3 minute pause during a break to reconnect with 5-4-3-2-1 Grounding."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp" />
+
+                    <Button
+                        android:id="@+id/btnStartAfternoon"
+                        android:layout_width="match_parent"
+                        android:layout_height="40dp"
+                        android:layout_marginTop="12dp"
+                        android:text="Begin Afternoon Reset (2m) 🌿"
+                        android:textColor="@color/bg_dark"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:backgroundTint="@color/emerald_accent"
+                        app:cornerRadius="10dp" />
+                </LinearLayout>
+
+                <!-- Before Sleep Card -->
+                <LinearLayout
+                    android:id="@+id/cardRoutineSleep"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="16dp"
+                    android:layout_marginBottom="14dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="🌙 Before Sleep Relaxation"
+                            android:textColor="@color/primary_blue"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="5–10 MIN"
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="10sp"
+                            android:textStyle="bold"
+                            android:background="@drawable/pill_background"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="3dp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Wind down with a gentle body scan. Dim screen mode with quiet, soft ending."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp" />
+
+                    <Button
+                        android:id="@+id/btnStartSleep"
+                        android:layout_width="match_parent"
+                        android:layout_height="40dp"
+                        android:layout_marginTop="12dp"
+                        android:text="Begin Sleep Wind-Down (5m) 🌙"
+                        android:textColor="@color/bg_dark"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:backgroundTint="@color/primary_blue"
+                        app:cornerRadius="10dp" />
+                </LinearLayout>
+
+                <!-- Encouraging Footnote -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="Start gently. If three sessions feel like too much, keep the morning session and treat others as optional. Missing a day is normal; simply begin again when you can."
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="11sp"
+                    android:lineSpacingExtra="2dp"
+                    android:paddingHorizontal="8dp" />
+            </LinearLayout>
+
+            <!-- ================= TAB 2: PRACTICES (CHOOSE WHAT YOU NEED) ================= -->
+            <LinearLayout
+                android:id="@+id/layoutPracticesTab"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="CHOOSE WHAT YOU NEED"
+                    android:textColor="@color/gold_primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Select a practice that fits how you feel right now. No need to empty your mind."
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="11sp"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- 1. Morning Breath Awareness -->
+                <LinearLayout
+                    android:id="@+id/cardPracticeBreath"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="14dp"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🌅 Breath Awareness (Morning)"
+                        android:textColor="@color/gold_primary"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Feel one natural breath. When your mind wanders, gently acknowledge: 'thinking', and return."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="10dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Anchor: Nose, chest or belly"
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="10sp" />
+
+                        <Button
+                            android:id="@+id/btnLaunchBreath"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:text="Start (3m)"
+                            android:textColor="@color/bg_dark"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:backgroundTint="@color/gold_primary"
+                            app:cornerRadius="8dp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- 2. Grounding 5-4-3-2-1 -->
+                <LinearLayout
+                    android:id="@+id/cardPracticeGrounding"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="14dp"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🛡️ Grounding 5-4-3-2-1 (Anxiety &amp; Overwhelm)"
+                        android:textColor="@color/emerald_accent"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Reconnect with the present when your mind feels busy. Name 5 see, 4 feel, 3 hear, 2 smell, 1 taste."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="10dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Anchor: Senses &amp; feet on floor"
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="10sp" />
+
+                        <Button
+                            android:id="@+id/btnLaunchGrounding"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:text="Start (2m)"
+                            android:textColor="@color/bg_dark"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:backgroundTint="@color/emerald_accent"
+                            app:cornerRadius="8dp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- 3. Open Awareness (Inner Peace) -->
+                <LinearLayout
+                    android:id="@+id/cardPracticeOpenAwareness"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="14dp"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🕊️ Open Awareness (Inner Peace)"
+                        android:textColor="@color/gold_primary"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Make room for what is here without needing to fix it immediately. Notice thoughts, sounds, sensations."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="10dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Anchor: Sitting posture &amp; sounds"
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="10sp" />
+
+                        <Button
+                            android:id="@+id/btnLaunchOpenAwareness"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:text="Start (5m)"
+                            android:textColor="@color/bg_dark"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:backgroundTint="@color/gold_primary"
+                            app:cornerRadius="8dp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- 4. Counting Breaths (Focus) -->
+                <LinearLayout
+                    android:id="@+id/cardPracticeCounting"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="14dp"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🎯 Counting Breaths (Sharpen Focus)"
+                        android:textColor="@color/primary_blue"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Count each exhale from 1 to 5. If you lose count, simply begin again at 1 without judgment."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="10dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Anchor: Exhale count (1 to 5)"
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="10sp" />
+
+                        <Button
+                            android:id="@+id/btnLaunchCounting"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:text="Start (3m)"
+                            android:textColor="@color/bg_dark"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:backgroundTint="@color/primary_blue"
+                            app:cornerRadius="8dp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- 5. Compassionate Phrases (Self-Kindness) -->
+                <LinearLayout
+                    android:id="@+id/cardPracticeCompassion"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="14dp"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="💚 Compassionate Phrases (Self-Kindness)"
+                        android:textColor="@color/emerald_accent"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Repeat gentle warmth: 'May I be kind to myself', 'May I have patience', 'May I find moments of ease'."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="10dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Anchor: Silent compassionate phrase"
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="10sp" />
+
+                        <Button
+                            android:id="@+id/btnLaunchCompassion"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:text="Start (3m)"
+                            android:textColor="@color/bg_dark"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:backgroundTint="@color/emerald_accent"
+                            app:cornerRadius="8dp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- 6. Gentle Body Scan (Sleep & Tension) -->
+                <LinearLayout
+                    android:id="@+id/cardPracticeBodyScan"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="14dp"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🌙 Gentle Body Scan (Before Sleep)"
+                        android:textColor="@color/primary_blue"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Release held tension from feet to face. Dim screen mode with quiet, unhurried fade-out."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="10dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Anchor: Body relaxation (Dim Mode)"
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="10sp" />
+
+                        <Button
+                            android:id="@+id/btnLaunchBodyScan"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:text="Start (5m)"
+                            android:textColor="@color/bg_dark"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:backgroundTint="@color/primary_blue"
+                            app:cornerRadius="8dp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- 7. Mindful Walking (Movement) -->
+                <LinearLayout
+                    android:id="@+id/cardPracticeWalking"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="14dp"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🚶 Mindful Walking (Movement)"
+                        android:textColor="@color/gold_primary"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Practice attention when sitting still doesn't feel right. Notice feet lifting, moving, and touching ground."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="10dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Anchor: Steps &amp; ground contact"
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="10sp" />
+
+                        <Button
+                            android:id="@+id/btnLaunchWalking"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:text="Start (3m)"
+                            android:textColor="@color/bg_dark"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:backgroundTint="@color/gold_primary"
+                            app:cornerRadius="8dp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- 8. Sacred Scripture Contemplation (Lectio Divina) -->
+                <LinearLayout
+                    android:id="@+id/cardPracticeScripture"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="14dp"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="📖 Sacred Scripture Contemplation"
+                        android:textColor="@color/gold_primary"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Lectio Divina: Read slowly, savor the Word of God, and abide in Christ's peace."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="10dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Anchor: Living Scriptures"
+                            android:textColor="@color/text_tertiary"
+                            android:textSize="10sp" />
+
+                        <Button
+                            android:id="@+id/btnLaunchScripture"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:text="Start (5m)"
+                            android:textColor="@color/bg_dark"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:backgroundTint="@color/gold_primary"
+                            app:cornerRadius="8dp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ================= TAB 3: LEARN (4-WEEK BEGINNER PROGRAM) ================= -->
+            <LinearLayout
+                android:id="@+id/layoutLearnTab"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="A 4-WEEK BEGINNER PROGRAM"
+                    android:textColor="@color/gold_primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="These durations are suggestions, not requirements. Stay at any stage longer if it feels comfortable."
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="11sp"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- Week 1 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="16dp"
+                    android:layout_marginBottom="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🗓️ Week 1 — Learn to Notice"
+                        android:textColor="@color/gold_primary"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Morning: 3m Breath • Afternoon: 2m Grounding • Night: 3–5m Body Scan"
+                        android:textColor="@color/emerald_accent"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Learn the basic cycle: Notice ➔ Become distracted ➔ Notice the distraction ➔ Gently return. Returning is not a mistake; returning is the practice."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:lineSpacingExtra="2dp" />
+                </LinearLayout>
+
+                <!-- Week 2 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="16dp"
+                    android:layout_marginBottom="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="💭 Week 2 — Meet Thoughts Kindly"
+                        android:textColor="@color/gold_primary"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Morning: 5m Breath/Sound • Afternoon: 3m Grounding/Walking • Night: 5m Body Scan"
+                        android:textColor="@color/emerald_accent"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="When a thought appears, don't battle it. Silently name it “thinking” or “planning,” then return to your chosen point of attention."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:lineSpacingExtra="2dp" />
+                </LinearLayout>
+
+                <!-- Week 3 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="16dp"
+                    android:layout_marginBottom="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🧭 Week 3 — Choose for Your Needs"
+                        android:textColor="@color/gold_primary"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Morning: 5–7m Attention • Afternoon: 3–5m from Needs • Night: 5–7m Sleep"
+                        android:textColor="@color/emerald_accent"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Try different anchors—breath, sounds, feet on the floor—and notice which feel comfortable. Anchor flexibility protects you from strain."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:lineSpacingExtra="2dp" />
+                </LinearLayout>
+
+                <!-- Week 4 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background"
+                    android:padding="16dp"
+                    android:layout_marginBottom="14dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🌿 Week 4 — Make It Yours"
+                        android:textColor="@color/gold_primary"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Morning: 5–10m Preferred • Afternoon: 3–5m Need • Night: 5–10m Sleep"
+                        android:textColor="@color/emerald_accent"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="At the end of the week, keep the practices and lengths you can realistically enjoy. Longer isn’t automatically better."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:lineSpacingExtra="2dp" />
+                </LinearLayout>
+
+                <!-- Safety Note Card -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background_elevated"
+                    android:padding="14dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🛡️ A Note for Difficult Experiences"
+                        android:textColor="@color/gold_primary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Meditation doesn’t feel helpful for everyone; sometimes it can increase distress. If a practice makes you feel worse, stop, open your eyes, and orient yourself to the room or do something comforting. Meditation can complement care, but it shouldn’t replace qualified professional support (NCCIH / NHS guidance)."
+                        android:textColor="@color/text_tertiary"
+                        android:textSize="10sp"
+                        android:lineSpacingExtra="2dp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ================= TAB 4: MY PRACTICE ================= -->
+            <LinearLayout
+                android:id="@+id/layoutJournalTab"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- Consistency & Minutes Card -->
+                <LinearLayout
+                    android:id="@+id/cardJournalStats"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/card_background_elevated"
+                    android:padding="16dp"
+                    android:layout_marginBottom="14dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="YOUR MINDFUL CONSISTENCY"
+                        android:textColor="@color/gold_primary"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.12" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="12dp">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvDaysPracticed"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0 / 7 Days"
+                                android:textColor="@color/text_primary"
+                                android:textSize="20sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="This Week"
+                                android:textColor="@color/text_tertiary"
+                                android:textSize="10sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvTotalMindfulMinutes"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0 Mins"
+                                android:textColor="@color/emerald_accent"
+                                android:textSize="20sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Total Practice"
+                                android:textColor="@color/text_tertiary"
+                                android:textSize="10sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="Consistency is showing up when you can. Missed days are completely normal—never treated as failure."
+                        android:textColor="@color/text_tertiary"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="COMPLETED SESSIONS &amp; NOTES"
+                    android:textColor="@color/gold_primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1"
+                    android:layout_marginBottom="8dp" />
+
+                <LinearLayout
+                    android:id="@+id/layoutCompletedSessionsList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <TextView
+                    android:id="@+id/tvEmptyJournal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:paddingVertical="30dp"
+                    android:text="No sessions recorded yet.\nBegin a gentle 2–3 minute practice today! 🕊️"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="12sp"
+                    android:lineSpacingExtra="4dp" />
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- ================= FULLSCREEN SESSION PLAYER OVERLAY ================= -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layoutSessionPlayer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/bg_dark"
+        android:visibility="gone"
+        android:padding="20dp">
+
+        <!-- Player Top Bar -->
+        <LinearLayout
+            android:id="@+id/playerTopBar"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="“Cause me to hear thy lovingkindness in the morning; for in thee do I trust.”"
-            android:textColor="@color/text_primary"
-            android:textSize="12sp"
-            android:lineSpacingExtra="2dp"
-            android:maxLines="3"
-            android:ellipsize="end"
-            app:layout_constraintTop_toBottomOf="@id/lblMeditationHeader"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="12dp"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <ImageButton
+                android:id="@+id/btnPlayerExit"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/pill_background"
+                android:src="@drawable/ic_close"
+                app:tint="@color/text_primary"
+                android:contentDescription="Exit" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginStart="12dp">
+
+                <TextView
+                    android:id="@+id/tvPlayerTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="MORNING BREATH AWARENESS"
+                    android:textColor="@color/gold_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvPlayerPurpose"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Build attention and begin with intention"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/btnEmergencyGround"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🛑 Ground"
+                android:textColor="@color/gold_primary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:background="@drawable/pill_background"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="6dp" />
+        </LinearLayout>
+
+        <!-- Dynamic Visualizer Aura -->
+        <com.example.nyirabyolife.ui.godfirst.SpiritualAuraView
+            android:id="@+id/auraPlayer"
+            android:layout_width="220dp"
+            android:layout_height="220dp"
+            app:layout_constraintTop_toBottomOf="@id/playerTopBar"
+            app:layout_constraintBottom_toTopOf="@id/layoutPlayerControls"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 
-        <TextView
-            android:id="@+id/tvMeditationRef"
-            android:layout_width="wrap_content"
+        <!-- Central Timer & Dynamic Cues -->
+        <LinearLayout
+            android:id="@+id/layoutPlayerCenterText"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="Psalm 143:8"
-            android:textColor="@color/gold_primary"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            app:layout_constraintTop_toBottomOf="@id/tvMeditationVerse"
-            app:layout_constraintStart_toStartOf="parent" />
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingHorizontal="24dp"
+            app:layout_constraintTop_toTopOf="@id/auraPlayer"
+            app:layout_constraintBottom_toBottomOf="@id/auraPlayer"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
 
-        <TextView
-            android:id="@+id/btnNextVerse"
-            android:layout_width="wrap_content"
+            <TextView
+                android:id="@+id/tvPlayerTimer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="03:00"
+                android:textColor="@color/text_primary"
+                android:textSize="36sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.04" />
+
+            <TextView
+                android:id="@+id/tvPlayerGuidance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Feel one natural breath."
+                android:textColor="@color/gold_primary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:gravity="center" />
+
+            <TextView
+                android:id="@+id/tvPlayerAnchorNotice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="When attention wanders, gently whisper 'thinking' and return."
+                android:textColor="@color/text_tertiary"
+                android:textSize="10sp"
+                android:gravity="center" />
+        </LinearLayout>
+
+        <!-- SPECIALIZED MODULE: Grounding 5-4-3-2-1 Interactive Card -->
+        <LinearLayout
+            android:id="@+id/moduleGrounding"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Next Verse 🕊️ →"
-            android:textColor="@color/emerald_accent"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            android:padding="4dp"
-            app:layout_constraintBottom_toBottomOf="@id/tvMeditationRef"
-            app:layout_constraintEnd_toEndOf="parent" />
+            android:orientation="vertical"
+            android:background="@drawable/card_background_elevated"
+            android:padding="16dp"
+            android:visibility="gone"
+            android:layout_marginHorizontal="12dp"
+            app:layout_constraintTop_toBottomOf="@id/auraPlayer"
+            app:layout_constraintBottom_toTopOf="@id/layoutPlayerControls">
+
+            <TextView
+                android:id="@+id/tvGroundingStepBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="STEP 1 OF 6 • LOOK AROUND"
+                android:textColor="@color/emerald_accent"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.1" />
+
+            <TextView
+                android:id="@+id/tvGroundingInstruction"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Look around and name 5 things you can see right now. 👁️"
+                android:textColor="@color/text_primary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btnNextGroundingStep"
+                android:layout_width="match_parent"
+                android:layout_height="38dp"
+                android:layout_marginTop="10dp"
+                android:text="Next Step ➔"
+                android:textColor="@color/bg_dark"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:backgroundTint="@color/emerald_accent"
+                app:cornerRadius="8dp" />
+        </LinearLayout>
+
+        <!-- SPECIALIZED MODULE: Counting Breaths Counter -->
+        <LinearLayout
+            android:id="@+id/moduleCounting"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:visibility="gone"
+            app:layout_constraintTop_toBottomOf="@id/auraPlayer"
+            app:layout_constraintBottom_toTopOf="@id/layoutPlayerControls">
+
+            <Button
+                android:id="@+id/btnCountTap"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:text="Exhaled: Count Next (1 / 5) 🎯"
+                android:textColor="@color/bg_dark"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:backgroundTint="@color/primary_blue"
+                app:cornerRadius="10dp"
+                android:layout_marginEnd="8dp" />
+
+            <Button
+                android:id="@+id/btnCountReset"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:text="Reset to 1"
+                android:textColor="@color/text_primary"
+                android:textSize="11sp"
+                android:backgroundTint="@color/bg_card_elevated"
+                app:cornerRadius="10dp" />
+        </LinearLayout>
+
+        <!-- SPECIALIZED MODULE: Scripture Contemplation -->
+        <LinearLayout
+            android:id="@+id/moduleScripture"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/card_background_elevated"
+            android:padding="14dp"
+            android:visibility="gone"
+            android:layout_marginHorizontal="12dp"
+            app:layout_constraintTop_toBottomOf="@id/auraPlayer"
+            app:layout_constraintBottom_toTopOf="@id/layoutPlayerControls">
+
+            <TextView
+                android:id="@+id/tvPlayerScriptureVerse"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="“Be still, and know that I am God.”"
+                android:textColor="@color/text_primary"
+                android:textSize="12sp"
+                android:lineSpacingExtra="2dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="6dp">
+
+                <TextView
+                    android:id="@+id/tvPlayerScriptureRef"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Psalm 46:10"
+                    android:textColor="@color/gold_primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/btnPlayerNextVerse"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Next Verse →"
+                    android:textColor="@color/emerald_accent"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:padding="4dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Player Controls (Anchor switcher, Pause, Finish) -->
+        <LinearLayout
+            android:id="@+id/layoutPlayerControls"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_marginBottom="16dp"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <!-- Anchor Switcher Pills -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:id="@+id/btnAnchorBreath"
+                    android:layout_width="wrap_content"
+                    android:layout_height="30dp"
+                    android:gravity="center"
+                    android:paddingHorizontal="10dp"
+                    android:text="🌬️ Breath"
+                    android:textColor="@color/gold_primary"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/card_background_elevated"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/btnAnchorSound"
+                    android:layout_width="wrap_content"
+                    android:layout_height="30dp"
+                    android:gravity="center"
+                    android:paddingHorizontal="10dp"
+                    android:text="🔔 Sounds"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/pill_background"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/btnAnchorFeet"
+                    android:layout_width="wrap_content"
+                    android:layout_height="30dp"
+                    android:gravity="center"
+                    android:paddingHorizontal="10dp"
+                    android:text="🦶 Feet on Floor"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/pill_background"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/btnDimToggle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="30dp"
+                    android:gravity="center"
+                    android:paddingHorizontal="10dp"
+                    android:text="🌙 Dim Mode"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/pill_background" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnPlayerPause"
+                    android:layout_width="0dp"
+                    android:layout_height="46dp"
+                    android:layout_weight="1"
+                    android:text="Pause ⏸️"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:backgroundTint="@color/bg_card_elevated"
+                    app:cornerRadius="12dp"
+                    android:layout_marginEnd="8dp" />
+
+                <Button
+                    android:id="@+id/btnPlayerFinish"
+                    android:layout_width="0dp"
+                    android:layout_height="46dp"
+                    android:layout_weight="1.2"
+                    android:text="Finish Early 🕊️"
+                    android:textColor="@color/bg_dark"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:backgroundTint="@color/gold_primary"
+                    app:cornerRadius="12dp" />
+            </LinearLayout>
+        </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- Duration Selection Pills (3m, 5m, 10m, 15m) -->
-    <LinearLayout
-        android:id="@+id/layoutDurationPills"
+    <!-- ================= POST-SESSION REFLECTION MODAL ================= -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layoutPostSessionModal"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:layout_marginHorizontal="20dp"
-        android:layout_marginBottom="14dp"
-        app:layout_constraintBottom_toTopOf="@id/btnStartMeditation">
+        android:layout_height="match_parent"
+        android:background="#D9000000"
+        android:visibility="gone"
+        android:padding="24dp">
 
-        <TextView
-            android:id="@+id/btnDur3"
-            android:layout_width="0dp"
-            android:layout_height="36dp"
-            android:layout_weight="1"
-            android:layout_marginEnd="6dp"
-            android:gravity="center"
-            android:text="3 Min"
-            android:textColor="@color/text_secondary"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            android:background="@drawable/pill_background" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/card_background_elevated"
+            android:padding="20dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
 
-        <TextView
-            android:id="@+id/btnDur5"
-            android:layout_width="0dp"
-            android:layout_height="36dp"
-            android:layout_weight="1"
-            android:layout_marginEnd="6dp"
-            android:gravity="center"
-            android:text="5 Min"
-            android:textColor="@color/gold_primary"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            android:background="@drawable/card_background_elevated" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🕊️ SESSION COMPLETE"
+                android:textColor="@color/gold_primary"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.1" />
 
-        <TextView
-            android:id="@+id/btnDur10"
-            android:layout_width="0dp"
-            android:layout_height="36dp"
-            android:layout_weight="1"
-            android:layout_marginEnd="6dp"
-            android:gravity="center"
-            android:text="10 Min"
-            android:textColor="@color/text_secondary"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            android:background="@drawable/pill_background" />
+            <TextView
+                android:id="@+id/tvPostSessionCompletedSummary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Well done on practicing attention today."
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" />
 
-        <TextView
-            android:id="@+id/btnDur15"
-            android:layout_width="0dp"
-            android:layout_height="36dp"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="15 Min"
-            android:textColor="@color/text_secondary"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            android:background="@drawable/pill_background" />
-    </LinearLayout>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="How do you feel right now?"
+                android:textColor="@color/text_primary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
 
-    <!-- Begin / Pause Meditation Button -->
-    <Button
-        android:id="@+id/btnStartMeditation"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:layout_marginHorizontal="20dp"
-        android:layout_marginBottom="20dp"
-        android:text="Begin Holy Meditation 🕊️"
-        android:textColor="@color/bg_dark"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:letterSpacing="0.06"
-        android:backgroundTint="@color/gold_primary"
-        app:cornerRadius="12dp"
-        app:layout_constraintBottom_toBottomOf="parent" />
+            <!-- Mood Pills -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                android:layout_marginTop="8dp">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/moodCalm"
+                        android:layout_width="wrap_content"
+                        android:layout_height="32dp"
+                        android:gravity="center"
+                        android:paddingHorizontal="12dp"
+                        android:text="😌 Calm"
+                        android:textColor="@color/gold_primary"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/card_background_elevated"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:id="@+id/moodGrounded"
+                        android:layout_width="wrap_content"
+                        android:layout_height="32dp"
+                        android:gravity="center"
+                        android:paddingHorizontal="12dp"
+                        android:text="🌿 Grounded"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:background="@drawable/pill_background"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:id="@+id/moodPeaceful"
+                        android:layout_width="wrap_content"
+                        android:layout_height="32dp"
+                        android:gravity="center"
+                        android:paddingHorizontal="12dp"
+                        android:text="🕊️ Peaceful"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:background="@drawable/pill_background"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:id="@+id/moodTired"
+                        android:layout_width="wrap_content"
+                        android:layout_height="32dp"
+                        android:gravity="center"
+                        android:paddingHorizontal="12dp"
+                        android:text="🥱 Sleepy"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:background="@drawable/pill_background"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:id="@+id/moodNeutral"
+                        android:layout_width="wrap_content"
+                        android:layout_height="32dp"
+                        android:gravity="center"
+                        android:paddingHorizontal="12dp"
+                        android:text="😐 Neutral"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:background="@drawable/pill_background" />
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="What did you notice? (Optional private note)"
+                android:textColor="@color/text_primary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/etReflectionNote"
+                android:layout_width="match_parent"
+                android:layout_height="72dp"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/card_background"
+                android:gravity="top|start"
+                android:padding="10dp"
+                android:hint="E.g. Mind was active, noticed thoughts, returned to breath..."
+                android:textColorHint="@color/text_tertiary"
+                android:textColor="@color/text_primary"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnSaveReflection"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginTop="16dp"
+                android:text="Save &amp; Return to Sanctuary 🕊️"
+                android:textColor="@color/bg_dark"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:backgroundTint="@color/gold_primary"
+                app:cornerRadius="10dp" />
+        </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

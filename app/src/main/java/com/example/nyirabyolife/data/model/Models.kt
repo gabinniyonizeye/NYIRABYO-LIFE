@@ -149,6 +149,18 @@ data class FocusSession(
     val isCompleted: Boolean = true
 )
 
+data class MeditationSessionRecord(
+    val id: Long = 0,
+    val practiceId: String,
+    val practiceName: String,
+    val durationMinutes: Int,
+    val timestamp: Long = System.currentTimeMillis(),
+    val note: String = "",
+    val preMood: String = "",
+    val postMood: String = "",
+    val isCompleted: Boolean = true
+)
+
 data class AppItem(
     val label: String,
     val packageName: String,

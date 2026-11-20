@@ -19,6 +19,7 @@
 
     <color name="indigo_focus">#6366F1</color>
     <color name="indigo_subtle">#1E2040</color>
+    <color name="primary_blue">#38BDF8</color>
 
     <color name="rose_alert">#F43F5E</color>
     <color name="rose_subtle">#33151D</color>

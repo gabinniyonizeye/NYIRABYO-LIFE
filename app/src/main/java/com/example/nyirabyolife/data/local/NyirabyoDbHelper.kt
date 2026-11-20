@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import com.example.nyirabyolife.data.model.FocusSession
 import com.example.nyirabyolife.data.model.GratitudeEntry
+import com.example.nyirabyolife.data.model.MeditationSessionRecord
 import com.example.nyirabyolife.data.model.Mission
 import com.example.nyirabyolife.data.model.PrayerItem
 import com.example.nyirabyolife.data.model.ShoppingSession
@@ -89,6 +90,22 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
                 )
             """.trimIndent())
         } catch (_: Exception) {}
+        // Meditation sessions (mindfulness & gentle practice tracking)
+        try {
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS meditation_sessions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    practice_id TEXT NOT NULL,
+                    practice_name TEXT NOT NULL,
+                    duration_minutes INTEGER NOT NULL,
+                    timestamp INTEGER NOT NULL,
+                    note TEXT DEFAULT '',
+                    pre_mood TEXT DEFAULT '',
+                    post_mood TEXT DEFAULT '',
+                    is_completed INTEGER NOT NULL DEFAULT 1
+                )
+            """.trimIndent())
+        } catch (_: Exception) {}
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -141,6 +158,20 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
                 session_type TEXT NOT NULL,
                 duration_minutes INTEGER NOT NULL,
                 timestamp INTEGER NOT NULL,
+                is_completed INTEGER NOT NULL DEFAULT 1
+            )
+        """.trimIndent())
+
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS meditation_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                practice_id TEXT NOT NULL,
+                practice_name TEXT NOT NULL,
+                duration_minutes INTEGER NOT NULL,
+                timestamp INTEGER NOT NULL,
+                note TEXT DEFAULT '',
+                pre_mood TEXT DEFAULT '',
+                post_mood TEXT DEFAULT '',
                 is_completed INTEGER NOT NULL DEFAULT 1
             )
         """.trimIndent())
@@ -544,6 +575,114 @@ class NyirabyoDbHelper(private val context: Context) : SQLiteOpenHelper(context,
             }
         }
         return list
+    }
+
+    // --- MEDITATION & MINDFULNESS SESSIONS ---
+    fun addMeditationRecord(record: MeditationSessionRecord): Long {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put("practice_id", record.practiceId)
+            put("practice_name", record.practiceName)
+            put("duration_minutes", record.durationMinutes)
+            put("timestamp", record.timestamp)
+            put("note", record.note)
+            put("pre_mood", record.preMood)
+            put("post_mood", record.postMood)
+            put("is_completed", if (record.isCompleted) 1 else 0)
+        }
+        val id = db.insert("meditation_sessions", null, values)
+        // Also log to focus_sessions for backward compatibility
+        try {
+            addFocusSession(
+                FocusSession(
+                    sessionType = "MEDITATION_${record.practiceId.uppercase()}",
+                    durationMinutes = record.durationMinutes,
+                    timestamp = record.timestamp,
+                    isCompleted = record.isCompleted
+                )
+            )
+        } catch (_: Exception) {}
+        return id
+    }
+
+    fun getMeditationRecords(limit: Int = 50): List<MeditationSessionRecord> {
+        val list = mutableListOf<MeditationSessionRecord>()
+        val db = readableDatabase
+        val cursor = db.query(
+            "meditation_sessions",
+            null,
+            null,
+            null,
+            null,
+            null,
+            "timestamp DESC",
+            limit.toString()
+        )
+        cursor.use {
+            while (it.moveToNext()) {
+                val id = it.getLong(it.getColumnIndexOrThrow("id"))
+                val practiceId = it.getString(it.getColumnIndexOrThrow("practice_id"))
+                val practiceName = it.getString(it.getColumnIndexOrThrow("practice_name"))
+                val duration = it.getInt(it.getColumnIndexOrThrow("duration_minutes"))
+                val timestamp = it.getLong(it.getColumnIndexOrThrow("timestamp"))
+                val note = it.getString(it.getColumnIndexOrThrow("note")) ?: ""
+                val preMood = it.getString(it.getColumnIndexOrThrow("pre_mood")) ?: ""
+                val postMood = it.getString(it.getColumnIndexOrThrow("post_mood")) ?: ""
+                val completed = it.getInt(it.getColumnIndexOrThrow("is_completed")) == 1
+                list.add(
+                    MeditationSessionRecord(
+                        id, practiceId, practiceName, duration, timestamp, note, preMood, postMood, completed
+                    )
+                )
+            }
+        }
+        return list
+    }
+
+    fun updateMeditationNote(id: Long, note: String, postMood: String = "") {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put("note", note)
+            if (postMood.isNotEmpty()) {
+                put("post_mood", postMood)
+            }
+        }
+        db.update("meditation_sessions", values, "id = ?", arrayOf(id.toString()))
+    }
+
+    fun getTotalMeditationMinutes(): Int {
+        val db = readableDatabase
+        val cursor = db.rawQuery("SELECT SUM(duration_minutes) FROM meditation_sessions WHERE is_completed = 1", null)
+        var total = 0
+        cursor.use {
+            if (it.moveToFirst() && !it.isNull(0)) {
+                total = it.getInt(0)
+            }
+        }
+        return total
+    }
+
+    fun getMeditationDaysThisWeek(): Int {
+        val db = readableDatabase
+        val cal = Calendar.getInstance()
+        cal.set(Calendar.DAY_OF_WEEK, cal.firstDayOfWeek)
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        val startOfWeek = cal.timeInMillis
+
+        val cursor = db.rawQuery(
+            "SELECT COUNT(DISTINCT strftime('%Y-%m-%d', timestamp / 1000, 'unixepoch', 'localtime')) FROM meditation_sessions WHERE timestamp >= ? AND is_completed = 1",
+            arrayOf(startOfWeek.toString())
+        )
+        var days = 0
+        cursor.use {
+            if (it.moveToFirst() && !it.isNull(0)) {
+                days = it.getInt(0)
+            }
+        }
+        return days
     }
 
     // --- EXPORT & PRIVACY ---
