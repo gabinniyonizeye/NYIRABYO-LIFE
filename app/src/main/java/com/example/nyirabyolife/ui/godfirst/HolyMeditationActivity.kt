@@ -1,13 +1,16 @@
 package com.example.nyirabyolife.ui.godfirst
 
-import android.animation.ValueAnimator
 import android.content.Context
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioTrack
 import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.speech.tts.TextToSpeech
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.TextView
@@ -23,8 +26,11 @@ import com.example.nyirabyolife.util.ThemeHelper
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.PI
+import kotlin.math.exp
+import kotlin.math.sin
 
-class HolyMeditationActivity : AppCompatActivity() {
+class HolyMeditationActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     enum class PracticeType(
         val practiceId: String,
@@ -32,7 +38,8 @@ class HolyMeditationActivity : AppCompatActivity() {
         val purpose: String,
         val defaultMinutes: Int,
         val defaultAnchor: String,
-        val initialPrompt: String
+        val initialPrompt: String,
+        val openingVoiceScript: String
     ) {
         MORNING_BREATH(
             "morning_breath",
@@ -40,7 +47,8 @@ class HolyMeditationActivity : AppCompatActivity() {
             "Build attention and begin the day with intention",
             3,
             "Breath (Nose, chest or belly)",
-            "Feel one breath. When you notice your attention has wandered, gently begin again."
+            "Feel one breath. When you notice your attention has wandered, gently begin again.",
+            "Welcome to your morning practice. Settle comfortably into your seat, letting your hands rest and your feet be supported. Notice where you feel the breath moving in your body: your nose, your chest, or your belly. Let each breath move naturally. There is no need to make it deep or slow. When your attention wanders, simply whisper 'thinking', and begin again."
         ),
         GROUNDING_54321(
             "grounding_54321",
@@ -48,7 +56,8 @@ class HolyMeditationActivity : AppCompatActivity() {
             "Reconnect with the present when your mind feels busy",
             2,
             "Senses & feet on floor",
-            "There is no need to force calm. Look around slowly and notice what is here."
+            "There is no need to force calm. Look around slowly and notice what is here.",
+            "Welcome to grounding. Take a comfortable, gentle breath, and feel the solid ground beneath your feet. There is no need to force calm. Step one: look around you slowly, and name five things you can see right now."
         ),
         OPEN_AWARENESS(
             "open_awareness",
@@ -56,7 +65,8 @@ class HolyMeditationActivity : AppCompatActivity() {
             "Make room for what is here without needing to fix it",
             5,
             "Sitting posture & sounds",
-            "For this moment, you can make room for what is here."
+            "For this moment, you can make room for what is here.",
+            "Settle into a comfortable posture, and notice the support beneath you. For this practice, you don't need to fix or change anything. Simply allow sounds, sensations, and thoughts to come and go naturally, making room for whatever is here."
         ),
         COUNTING_BREATHS(
             "counting_breaths",
@@ -64,7 +74,8 @@ class HolyMeditationActivity : AppCompatActivity() {
             "Practice returning your attention to one task",
             3,
             "Exhale count (1 to 5)",
-            "Each time you begin again, you are practicing attention."
+            "Each time you begin again, you are practicing attention.",
+            "Let's practice returning attention to one task. Settle into your seat. As each exhale naturally completes, silently count one. On the next exhale, count two, continuing up to five. If you lose count, simply begin again at one. Each time you begin again, you are strengthening attention."
         ),
         COMPASSION(
             "compassion",
@@ -72,7 +83,8 @@ class HolyMeditationActivity : AppCompatActivity() {
             "Respond to yourself with warmth and patience",
             3,
             "Compassionate phrases",
-            "Silently repeat a phrase that feels natural, leaving space between repetitions."
+            "Silently repeat a phrase that feels natural, leaving space between repetitions.",
+            "Settle into your seat, and let your body be supported. Silently repeat these gentle words with space between them: May I be kind to myself. May I have patience. May I find moments of ease."
         ),
         BODY_SCAN(
             "body_scan",
@@ -80,7 +92,8 @@ class HolyMeditationActivity : AppCompatActivity() {
             "Wind down and notice areas that might be holding tension",
             5,
             "Body sensations & Dim Mode",
-            "There is nothing to achieve. Allow yourself to rest."
+            "There is nothing to achieve. Allow yourself to rest.",
+            "Lie comfortably, and allow the bed to support your entire weight. There is nothing to achieve, and nowhere else you need to be. Bring gentle awareness down to your feet and toes, allowing any tension to soften."
         ),
         WALKING(
             "walking",
@@ -88,7 +101,8 @@ class HolyMeditationActivity : AppCompatActivity() {
             "Practice attention when sitting still doesn't feel right",
             3,
             "Feet touching the ground",
-            "Notice each step. When your mind wanders, gently return to the next step."
+            "Notice each step. When your mind wanders, gently return to the next step.",
+            "Begin walking at a comfortable, natural pace with your eyes softly open. Notice the feeling of your feet lifting, moving through the air, and touching the ground. When your mind wanders, gently return to the very next step."
         ),
         SCRIPTURE(
             "scripture",
@@ -96,23 +110,25 @@ class HolyMeditationActivity : AppCompatActivity() {
             "Lectio Divina: Contemplating the Living Word & Peace",
             5,
             "Living Word & Presence",
-            "Be still, and know that I am God. Rest in His lovingkindness."
+            "Be still, and know that I am God. Rest in His lovingkindness.",
+            "Be still, and know that I am God. In peace I will lie down and sleep, for You alone, Lord, make me dwell in safety. Savor His living Word and rest in Christ's peace."
         )
     }
 
     private data class GroundingStep(
         val badge: String,
         val instruction: String,
-        val nextLabel: String
+        val nextLabel: String,
+        val voiceScript: String
     )
 
     private val groundingSteps = listOf(
-        GroundingStep("STEP 1 OF 6 • LOOK AROUND", "Look around and name 5 things you can see right now. 👁️", "Next Step (4 Things You Feel) ➔"),
-        GroundingStep("STEP 2 OF 6 • PHYSICAL TOUCH", "Notice 4 things you can feel right now (clothes, chair, air on skin). ✋", "Next Step (3 Sounds) ➔"),
-        GroundingStep("STEP 3 OF 6 • LISTEN CLOSELY", "Listen for 3 sounds around you (distant hum, clock, breathing). 👂", "Next Step (2 Smells) ➔"),
-        GroundingStep("STEP 4 OF 6 • SENSE SMELL", "Notice 2 things you can smell around you (fresh air, room scent). 👃", "Next Step (1 Taste) ➔"),
-        GroundingStep("STEP 5 OF 6 • SENSE TASTE", "Notice 1 thing you can taste, or the resting sensation of your mouth. 👅", "Next Step (Ground Your Feet) ➔"),
-        GroundingStep("STEP 6 OF 6 • SOLID SUPPORT", "Feel the solid ground beneath your feet and the support under your body. 🦶", "Complete Grounding 🕊️")
+        GroundingStep("STEP 1 OF 6 • LOOK AROUND", "Look around and name 5 things you can see right now. 👁️", "Next Step (4 Things You Feel) ➔", "Step one: Look around slowly and name five things you can see. Notice their colors, textures, and shapes."),
+        GroundingStep("STEP 2 OF 6 • PHYSICAL TOUCH", "Notice 4 things you can feel right now (clothes, chair, air on skin). ✋", "Next Step (3 Sounds) ➔", "Step two: Notice four things you can feel with your body right now. Perhaps your clothes, the chair beneath you, or the cool air on your skin."),
+        GroundingStep("STEP 3 OF 6 • LISTEN CLOSELY", "Listen for 3 sounds around you (distant hum, clock, breathing). 👂", "Next Step (2 Smells) ➔", "Step three: Listen gently for three sounds around you. Let them rise and fall naturally without straining."),
+        GroundingStep("STEP 4 OF 6 • SENSE SMELL", "Notice 2 things you can smell around you (fresh air, room scent). 👃", "Next Step (1 Taste) ➔", "Step four: Notice two things you can smell right now in your space."),
+        GroundingStep("STEP 5 OF 6 • SENSE TASTE", "Notice 1 thing you can taste, or the resting sensation of your mouth. 👅", "Next Step (Ground Your Feet) ➔", "Step five: Notice one thing you can taste, or the simple resting sensation inside your mouth."),
+        GroundingStep("STEP 6 OF 6 • SOLID SUPPORT", "Feel the solid ground beneath your feet and the support under your body. 🦶", "Complete Grounding 🕊️", "Step six: Feel the solid support beneath your body, and your feet resting firmly on the ground. You are present, grounded, and safe.")
     )
 
     private val compassionatePhrases = listOf(
@@ -122,31 +138,42 @@ class HolyMeditationActivity : AppCompatActivity() {
         "“May I be gentle with my thoughts.”"
     )
 
-    private val bodyScanRegions = listOf(
-        "Feet & Toes 🦶",
-        "Lower Legs & Knees 🦵",
-        "Hips, Pelvis & Lower Back",
-        "Belly & Natural Breathing",
-        "Shoulders & Upper Back",
-        "Arms & Hands ✋",
-        "Neck & Softened Jaw",
-        "Eyes, Forehead & Face 😌",
-        "Entire Body at Peaceful Rest 🌙"
+    private val compassionateVoiceScripts = listOf(
+        "May I be kind to myself.",
+        "May I have patience with my journey.",
+        "May I find moments of ease and peace.",
+        "May I be gentle with my thoughts."
     )
 
-    private data class ScriptureVerse(val scripture: String, val reference: String)
+    private val bodyScanRegions = listOf(
+        Pair("Feet & Toes 🦶", "Bring gentle awareness down to your feet and toes. Invite any tension to soften and release."),
+        Pair("Lower Legs & Knees 🦵", "Allow awareness to travel up through your lower legs, calves, and knees. Letting them feel heavy and relaxed."),
+        Pair("Hips, Pelvis & Lower Back", "Notice your hips, pelvis, and lower back. Sinking gently into the support beneath you."),
+        Pair("Belly & Natural Breathing", "Notice your belly. Let your breath rise and fall effortlessly, without any force."),
+        Pair("Shoulders & Upper Back", "Feel your shoulders dropping away from your ears, releasing any burdens of the day."),
+        Pair("Arms & Hands ✋", "Soften your hands, your fingers, and your arms, resting limp and peaceful."),
+        Pair("Neck & Softened Jaw", "Notice your neck. Gently unclench your jaw and let your tongue rest loosely."),
+        Pair("Eyes, Forehead & Face 😌", "Smooth the forehead, softening the eyes and face."),
+        Pair("Entire Body at Peaceful Rest 🌙", "Allow your whole body to rest together in quiet, undisturbed peace.")
+    )
+
+    private data class ScriptureVerse(val scripture: String, val reference: String, val voiceScript: String)
     private val scriptureVerses = listOf(
-        ScriptureVerse("“Let the morning bring me word of your unfailing love, for I have put my trust in you. Show me the way I should go, for to you I entrust my life.”", "Psalm 143:8"),
-        ScriptureVerse("“Peace I leave with you; my peace I give to you. I do not give to you as the world gives. Do not let your hearts be troubled and do not be afraid.”", "John 14:27"),
-        ScriptureVerse("“Be still, and know that I am God! I will be honored by every nation. I will be honored throughout the world.”", "Psalm 46:10"),
-        ScriptureVerse("“Come to me, all you who are weary and burdened, and I will give you rest. Take my yoke upon you and learn from me, for I am gentle and humble in heart.”", "Matthew 11:28-29"),
-        ScriptureVerse("“In peace I will lie down and sleep, for you alone, LORD, make me dwell in safety.”", "Psalm 4:8"),
-        ScriptureVerse("“The steadfast love of the LORD never ceases; his mercies never come to an end; they are new every morning.”", "Lamentations 3:22-23"),
-        ScriptureVerse("“Remain in me, as I also remain in you. No branch can bear fruit by itself; it must remain in the vine.”", "John 15:4")
+        ScriptureVerse("“Let the morning bring me word of your unfailing love, for I have put my trust in you. Show me the way I should go, for to you I entrust my life.”", "Psalm 143:8", "Let the morning bring me word of your unfailing love, for I have put my trust in you. Show me the way I should go, for to you I entrust my life. Psalm 143:8"),
+        ScriptureVerse("“Peace I leave with you; my peace I give to you. I do not give to you as the world gives. Do not let your hearts be troubled and do not be afraid.”", "John 14:27", "Peace I leave with you; my peace I give to you. Do not let your hearts be troubled, and do not be afraid. John 14:27"),
+        ScriptureVerse("“Be still, and know that I am God! I will be honored by every nation. I will be honored throughout the world.”", "Psalm 46:10", "Be still, and know that I am God. Psalm 46:10"),
+        ScriptureVerse("“Come to me, all you who are weary and burdened, and I will give you rest. Take my yoke upon you and learn from me, for I am gentle and humble in heart.”", "Matthew 11:28-29", "Come to me, all you who are weary and burdened, and I will give you rest. Matthew 11:28"),
+        ScriptureVerse("“In peace I will lie down and sleep, for you alone, LORD, make me dwell in safety.”", "Psalm 4:8", "In peace I will lie down and sleep, for you alone, Lord, make me dwell in safety. Psalm 4:8"),
+        ScriptureVerse("“The steadfast love of the LORD never ceases; his mercies never come to an end; they are new every morning.”", "Lamentations 3:22-23", "The steadfast love of the Lord never ceases; His mercies are new every morning. Great is your faithfulness.")
     )
 
     private lateinit var binding: ActivityHolyMeditationBinding
     private lateinit var dbHelper: NyirabyoDbHelper
+
+    // TextToSpeech Engine
+    private var tts: TextToSpeech? = null
+    private var isTtsReady = false
+    private var isVoiceEnabled = true
 
     private var currentPractice = PracticeType.MORNING_BREATH
     private var totalMillis = 3 * 60 * 1000L
@@ -161,6 +188,7 @@ class HolyMeditationActivity : AppCompatActivity() {
     private var bodyScanIndex = 0
     private var scriptureIndex = 0
     private var isDimMode = false
+    private var lastSpokenSecond = -1
     private var selectedPreMood = "😌 Calm"
     private var selectedPostMood = "😌 Calm"
     private var lastRecordedSessionId: Long = 0L
@@ -172,6 +200,9 @@ class HolyMeditationActivity : AppCompatActivity() {
 
         dbHelper = NyirabyoDbHelper.getInstance(this)
 
+        // Initialize Native Speech Engine for Headphone/Eyes-closed Guided Meditation
+        tts = TextToSpeech(this, this)
+
         setupTheme()
         setupTopTabs()
         setupTodayLaunchers()
@@ -181,6 +212,80 @@ class HolyMeditationActivity : AppCompatActivity() {
         refreshJournalStats()
 
         binding.btnBack.setOnClickListener { finish() }
+    }
+
+    override fun onInit(status: Int) {
+        if (status == TextToSpeech.SUCCESS) {
+            val result = tts?.setLanguage(Locale.US)
+            if (result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED) {
+                isTtsReady = true
+                // Calming meditation cadence: slower rate, grounded soothing pitch
+                tts?.setSpeechRate(0.82f)
+                tts?.setPitch(0.95f)
+            }
+        }
+    }
+
+    private fun speakGuidance(text: String, queueMode: Int = TextToSpeech.QUEUE_FLUSH) {
+        if (!isVoiceEnabled || !isTtsReady) return
+        try {
+            val params = Bundle().apply {
+                putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 0.95f)
+            }
+            tts?.speak(text, queueMode, params, "GUIDE_${System.currentTimeMillis()}")
+        } catch (_: Exception) {}
+    }
+
+    private fun stopGuidanceVoice() {
+        try {
+            tts?.stop()
+        } catch (_: Exception) {}
+    }
+
+    /**
+     * Synthesizes and plays a resonant Tibetan singing bowl chime in real-time.
+     * Pure mathematical acoustics with fundamental + warm harmonics and exponential decay envelope.
+     */
+    private fun playMeditationChime(frequency: Double = 432.0, durationMs: Int = 2200) {
+        Thread {
+            try {
+                val sampleRate = 44100
+                val numSamples = (sampleRate * (durationMs / 1000.0)).toInt()
+                val buffer = ShortArray(numSamples)
+                for (i in 0 until numSamples) {
+                    val t = i.toDouble() / sampleRate
+                    val decay = exp(-2.8 * t / (durationMs / 1000.0))
+                    val sample = (sin(2.0 * PI * frequency * t) * 0.65 +
+                                  sin(2.0 * PI * (frequency * 1.5) * t) * 0.22 +
+                                  sin(2.0 * PI * (frequency * 2.76) * t) * 0.13) * decay
+                    buffer[i] = (sample * Short.MAX_VALUE * 0.40).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+                }
+
+                val track = AudioTrack.Builder()
+                    .setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .build()
+                    )
+                    .setAudioFormat(
+                        AudioFormat.Builder()
+                            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                            .setSampleRate(sampleRate)
+                            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                            .build()
+                    )
+                    .setBufferSizeInBytes(buffer.size * 2)
+                    .setTransferMode(AudioTrack.MODE_STATIC)
+                    .build()
+
+                track.write(buffer, 0, buffer.size)
+                track.play()
+                Thread.sleep(durationMs.toLong() + 150)
+                track.stop()
+                track.release()
+            } catch (_: Exception) {}
+        }.start()
     }
 
     private fun setupTheme() {
@@ -266,6 +371,7 @@ class HolyMeditationActivity : AppCompatActivity() {
         compassionateIndex = 0
         bodyScanIndex = 0
         scriptureIndex = 0
+        lastSpokenSecond = -1
         isDimMode = startWithDim
         updateDimOverlay()
 
@@ -274,6 +380,7 @@ class HolyMeditationActivity : AppCompatActivity() {
         binding.tvPlayerGuidance.text = practice.initialPrompt
         binding.tvPlayerAnchorNotice.text = "Anchor: ${practice.defaultAnchor} • Whisper 'thinking' if mind wanders"
         updateTimerDisplay(millisRemaining)
+        updateVoiceButtonUI()
 
         // Configure Specialized UI Modules
         binding.moduleGrounding.visibility = if (practice == PracticeType.GROUNDING_54321) View.VISIBLE else View.GONE
@@ -281,11 +388,11 @@ class HolyMeditationActivity : AppCompatActivity() {
         binding.moduleScripture.visibility = if (practice == PracticeType.SCRIPTURE) View.VISIBLE else View.GONE
 
         if (practice == PracticeType.GROUNDING_54321) {
-            updateGroundingStepUI()
+            updateGroundingStepUI(speak = false)
         } else if (practice == PracticeType.COUNTING_BREATHS) {
             binding.btnCountTap.text = "Exhaled: Count (1 / 5) 🎯"
         } else if (practice == PracticeType.SCRIPTURE) {
-            updateScriptureUI()
+            updateScriptureUI(speak = false)
         }
 
         // Show player, hide main scroll
@@ -293,6 +400,10 @@ class HolyMeditationActivity : AppCompatActivity() {
         binding.scrollTabs.visibility = View.GONE
         binding.headerMeditation.visibility = View.GONE
         binding.layoutSessionPlayer.visibility = View.VISIBLE
+
+        // Start Bell Chime (432 Hz) & Voice Script
+        playMeditationChime(432.0, 2500)
+        speakGuidance(practice.openingVoiceScript)
 
         startSessionTimer()
     }
@@ -318,6 +429,7 @@ class HolyMeditationActivity : AppCompatActivity() {
     private fun pauseSessionTimer() {
         isTimerRunning = false
         countDownTimer?.cancel()
+        stopGuidanceVoice()
         binding.btnPlayerPause.text = "Resume ▶️"
         binding.tvPlayerGuidance.text = "Practice Paused • Rest in Grace"
     }
@@ -331,8 +443,38 @@ class HolyMeditationActivity : AppCompatActivity() {
 
     private fun updateDynamicGuidance(millisRemaining: Long) {
         val elapsedSec = ((totalMillis - millisRemaining) / 1000).toInt()
+        if (elapsedSec == lastSpokenSecond) return
+        lastSpokenSecond = elapsedSec
 
         when (currentPractice) {
+            PracticeType.GROUNDING_54321 -> {
+                // Auto-advance grounding step every 20 seconds for eyes-closed/headphone mode
+                val stepTarget = (elapsedSec / 20).coerceIn(0, groundingSteps.size - 1)
+                if (stepTarget != groundingStepIndex) {
+                    groundingStepIndex = stepTarget
+                    updateGroundingStepUI(speak = true)
+                }
+            }
+            PracticeType.BODY_SCAN -> {
+                val regionIdx = (elapsedSec / 33).coerceIn(0, bodyScanRegions.size - 1)
+                if (regionIdx != bodyScanIndex) {
+                    bodyScanIndex = regionIdx
+                    val (regionName, voiceScript) = bodyScanRegions[regionIdx]
+                    binding.tvPlayerGuidance.text = "Awareness to: $regionName"
+                    binding.tvPlayerAnchorNotice.text = "Notice sensation without forcing any change."
+                    playMeditationChime(396.0, 1800)
+                    speakGuidance(voiceScript)
+                }
+            }
+            PracticeType.COMPASSION -> {
+                val phraseIdx = (elapsedSec / 18).coerceIn(0, compassionatePhrases.size - 1)
+                if (phraseIdx != compassionateIndex) {
+                    compassionateIndex = phraseIdx
+                    binding.tvPlayerGuidance.text = compassionatePhrases[phraseIdx]
+                    playMeditationChime(528.0, 1500)
+                    speakGuidance(compassionateVoiceScripts[phraseIdx])
+                }
+            }
             PracticeType.MORNING_BREATH -> {
                 val cycleSec = elapsedSec % 16
                 binding.tvPlayerGuidance.text = when {
@@ -341,15 +483,11 @@ class HolyMeditationActivity : AppCompatActivity() {
                     cycleSec < 12 -> "Feel the gentle exhale..."
                     else -> "When your mind wanders, gently whisper 'thinking' and return."
                 }
-            }
-            PracticeType.COMPASSION -> {
-                val phraseIdx = (elapsedSec / 15) % compassionatePhrases.size
-                binding.tvPlayerGuidance.text = compassionatePhrases[phraseIdx]
-            }
-            PracticeType.BODY_SCAN -> {
-                val regionIdx = (elapsedSec / 35).coerceIn(0, bodyScanRegions.size - 1)
-                binding.tvPlayerGuidance.text = "Bring gentle awareness to: ${bodyScanRegions[regionIdx]}"
-                binding.tvPlayerAnchorNotice.text = "Notice whatever sensation is there without forcing change."
+                if (elapsedSec == 60) {
+                    speakGuidance("When you notice your mind has wandered to thoughts or planning, gently acknowledge it as thinking, and return your attention to the next breath.")
+                } else if (elapsedSec == 120) {
+                    speakGuidance("Feel one breath. Savor this moment of presence.")
+                }
             }
             PracticeType.OPEN_AWARENESS -> {
                 val cycle = (elapsedSec / 20) % 3
@@ -357,6 +495,9 @@ class HolyMeditationActivity : AppCompatActivity() {
                     0 -> "Notice sounds and sensations coming and going..."
                     1 -> "When something catches attention: silently name 'sound', 'thought', or 'feeling'."
                     else -> "For this moment, make room for whatever is here."
+                }
+                if (elapsedSec == 60) {
+                    speakGuidance("If a sound, sensation, or thought catches your attention, silently name it: sound, thought, or feeling, then return to the feeling of sitting.")
                 }
             }
             PracticeType.WALKING -> {
@@ -366,27 +507,39 @@ class HolyMeditationActivity : AppCompatActivity() {
                 } else {
                     "When your mind wanders, gently return to the next step."
                 }
+                if (elapsedSec == 60) {
+                    speakGuidance("Stay present with each step. Notice your feet lifting, moving, and touching the ground.")
+                }
             }
             else -> {}
         }
     }
 
-    // Specialized Grounding Steps
-    private fun updateGroundingStepUI() {
+    // Specialized Grounding Steps with Voice & Chime
+    private fun updateGroundingStepUI(speak: Boolean = true) {
         if (groundingStepIndex in groundingSteps.indices) {
             val step = groundingSteps[groundingStepIndex]
             binding.tvGroundingStepBadge.text = step.badge
             binding.tvGroundingInstruction.text = step.instruction
             binding.btnNextGroundingStep.text = step.nextLabel
+
+            if (speak) {
+                playMeditationChime(528.0, 1600)
+                speakGuidance(step.voiceScript)
+            }
         }
     }
 
     // Specialized Scripture UI
-    private fun updateScriptureUI() {
+    private fun updateScriptureUI(speak: Boolean = true) {
         if (scriptureVerses.isNotEmpty()) {
             val v = scriptureVerses[scriptureIndex.coerceIn(0, scriptureVerses.size - 1)]
             binding.tvPlayerScriptureVerse.text = v.scripture
             binding.tvPlayerScriptureRef.text = v.reference
+            if (speak) {
+                playMeditationChime(432.0, 2000)
+                speakGuidance(v.voiceScript)
+            }
         }
     }
 
@@ -408,9 +561,22 @@ class HolyMeditationActivity : AppCompatActivity() {
             exitPlayerToSanctuary()
         }
 
+        // Voice Guidance Toggle
+        binding.btnVoiceToggle.setOnClickListener {
+            isVoiceEnabled = !isVoiceEnabled
+            if (!isVoiceEnabled) {
+                stopGuidanceVoice()
+            } else {
+                speakGuidance("Voice guidance enabled.")
+            }
+            updateVoiceButtonUI()
+        }
+
         // Emergency Grounding button
         binding.btnEmergencyGround.setOnClickListener {
             pauseSessionTimer()
+            stopGuidanceVoice()
+            speakGuidance("Take a gentle pause. Open your eyes, look around, and feel your feet firmly on the ground. There is no rush.")
             Toast.makeText(
                 this,
                 "Take a pause. Open your eyes, look around, and feel your feet on the floor. There is no rush 🌿",
@@ -423,7 +589,7 @@ class HolyMeditationActivity : AppCompatActivity() {
         binding.btnNextGroundingStep.setOnClickListener {
             groundingStepIndex++
             if (groundingStepIndex < groundingSteps.size) {
-                updateGroundingStepUI()
+                updateGroundingStepUI(speak = true)
             } else {
                 completeSession()
             }
@@ -436,18 +602,24 @@ class HolyMeditationActivity : AppCompatActivity() {
             binding.btnCountTap.text = "Exhaled: Count ($breathCount / 5) 🎯"
             binding.tvPlayerGuidance.text = "Exhale counted: $breathCount"
             vibrateSubtleTick()
+            if (isVoiceEnabled) {
+                speakGuidance("$breathCount")
+            }
         }
 
         binding.btnCountReset.setOnClickListener {
             breathCount = 1
             binding.btnCountTap.text = "Exhaled: Count (1 / 5) 🎯"
             binding.tvPlayerGuidance.text = "Reset to 1 • Returning IS the practice"
+            if (isVoiceEnabled) {
+                speakGuidance("One. Beginning again.")
+            }
         }
 
         // Scripture next verse
         binding.btnPlayerNextVerse.setOnClickListener {
             scriptureIndex = (scriptureIndex + 1) % scriptureVerses.size
-            updateScriptureUI()
+            updateScriptureUI(speak = true)
         }
 
         // Dim Mode Toggle
@@ -460,14 +632,27 @@ class HolyMeditationActivity : AppCompatActivity() {
         binding.btnAnchorBreath.setOnClickListener {
             binding.tvPlayerAnchorNotice.text = "Anchor: Breath in nose/chest • Return gently when wandering"
             highlightAnchor(binding.btnAnchorBreath)
+            speakGuidance("Anchor switched to natural breath.")
         }
         binding.btnAnchorSound.setOnClickListener {
             binding.tvPlayerAnchorNotice.text = "Anchor: Ambient room sounds • Let them rise and fall"
             highlightAnchor(binding.btnAnchorSound)
+            speakGuidance("Anchor switched to sounds around you.")
         }
         binding.btnAnchorFeet.setOnClickListener {
             binding.tvPlayerAnchorNotice.text = "Anchor: Sensation of feet on the floor • Grounded & supported"
             highlightAnchor(binding.btnAnchorFeet)
+            speakGuidance("Anchor switched to feet on the floor.")
+        }
+    }
+
+    private fun updateVoiceButtonUI() {
+        if (isVoiceEnabled) {
+            binding.btnVoiceToggle.text = "🔊 Voice: ON"
+            binding.btnVoiceToggle.setTextColor(ContextCompat.getColor(this, R.color.emerald_accent))
+        } else {
+            binding.btnVoiceToggle.text = "🔇 Voice: OFF"
+            binding.btnVoiceToggle.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
         }
     }
 
@@ -496,6 +681,7 @@ class HolyMeditationActivity : AppCompatActivity() {
     private fun completeSession() {
         countDownTimer?.cancel()
         isTimerRunning = false
+        stopGuidanceVoice()
 
         val durationMinutes = ((totalMillis - millisRemaining) / 1000 / 60).toInt().coerceAtLeast(1)
 
@@ -513,6 +699,8 @@ class HolyMeditationActivity : AppCompatActivity() {
         lastRecordedSessionId = dbHelper.addMeditationRecord(record)
 
         if (!isDimMode) {
+            playMeditationChime(528.0, 3000)
+            speakGuidance("Your practice is complete. Walk in peace.")
             vibratePeaceChime()
         }
 
@@ -525,6 +713,7 @@ class HolyMeditationActivity : AppCompatActivity() {
     private fun exitPlayerToSanctuary() {
         countDownTimer?.cancel()
         isTimerRunning = false
+        stopGuidanceVoice()
         binding.layoutSessionPlayer.visibility = View.GONE
         binding.layoutPostSessionModal.visibility = View.GONE
         binding.scrollMainContent.visibility = View.VISIBLE
@@ -639,5 +828,7 @@ class HolyMeditationActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         countDownTimer?.cancel()
+        tts?.stop()
+        tts?.shutdown()
     }
 }
