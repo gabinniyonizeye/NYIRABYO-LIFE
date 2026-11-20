@@ -1445,65 +1445,85 @@
             android:layout_marginBottom="16dp"
             app:layout_constraintBottom_toBottomOf="parent">
 
-            <!-- Anchor Switcher Pills -->
-            <LinearLayout
+            <!-- Anchor & Ambient Sound Switcher Pills -->
+            <HorizontalScrollView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center"
+                android:scrollbars="none"
+                android:overScrollMode="never"
                 android:layout_marginBottom="12dp">
 
-                <TextView
-                    android:id="@+id/btnAnchorBreath"
+                <LinearLayout
                     android:layout_width="wrap_content"
-                    android:layout_height="30dp"
-                    android:gravity="center"
-                    android:paddingHorizontal="10dp"
-                    android:text="🌬️ Breath"
-                    android:textColor="@color/gold_primary"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:background="@drawable/card_background_elevated"
-                    android:layout_marginEnd="6dp" />
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center">
 
-                <TextView
-                    android:id="@+id/btnAnchorSound"
-                    android:layout_width="wrap_content"
-                    android:layout_height="30dp"
-                    android:gravity="center"
-                    android:paddingHorizontal="10dp"
-                    android:text="🔔 Sounds"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:background="@drawable/pill_background"
-                    android:layout_marginEnd="6dp" />
+                    <TextView
+                        android:id="@+id/btnAnchorBreath"
+                        android:layout_width="wrap_content"
+                        android:layout_height="30dp"
+                        android:gravity="center"
+                        android:paddingHorizontal="10dp"
+                        android:text="🌬️ Breath"
+                        android:textColor="@color/gold_primary"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/card_background_elevated"
+                        android:layout_marginEnd="6dp" />
 
-                <TextView
-                    android:id="@+id/btnAnchorFeet"
-                    android:layout_width="wrap_content"
-                    android:layout_height="30dp"
-                    android:gravity="center"
-                    android:paddingHorizontal="10dp"
-                    android:text="🦶 Feet on Floor"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:background="@drawable/pill_background"
-                    android:layout_marginEnd="6dp" />
+                    <TextView
+                        android:id="@+id/btnAnchorSound"
+                        android:layout_width="wrap_content"
+                        android:layout_height="30dp"
+                        android:gravity="center"
+                        android:paddingHorizontal="10dp"
+                        android:text="🔔 Sounds"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/pill_background"
+                        android:layout_marginEnd="6dp" />
 
-                <TextView
-                    android:id="@+id/btnDimToggle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="30dp"
-                    android:gravity="center"
-                    android:paddingHorizontal="10dp"
-                    android:text="🌙 Dim Mode"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:background="@drawable/pill_background" />
-            </LinearLayout>
+                    <TextView
+                        android:id="@+id/btnAnchorFeet"
+                        android:layout_width="wrap_content"
+                        android:layout_height="30dp"
+                        android:gravity="center"
+                        android:paddingHorizontal="10dp"
+                        android:text="🦶 Feet on Floor"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/pill_background"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:id="@+id/btnAmbientToggle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="30dp"
+                        android:gravity="center"
+                        android:paddingHorizontal="10dp"
+                        android:text="🎶 Ambient: 432 Hz 🕊️"
+                        android:textColor="@color/gold_primary"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/card_background_elevated"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:id="@+id/btnDimToggle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="30dp"
+                        android:gravity="center"
+                        android:paddingHorizontal="10dp"
+                        android:text="🌙 Dim Mode"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/pill_background" />
+                </LinearLayout>
+            </HorizontalScrollView>
 
             <LinearLayout
                 android:layout_width="match_parent"

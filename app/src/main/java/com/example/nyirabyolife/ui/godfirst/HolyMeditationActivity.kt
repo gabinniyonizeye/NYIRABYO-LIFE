@@ -175,6 +175,9 @@ class HolyMeditationActivity : AppCompatActivity(), TextToSpeech.OnInitListener 
     private var isTtsReady = false
     private var isVoiceEnabled = true
 
+    // Ambient Soundscape Engine (432 Hz Healing Drone & Gentle Rain)
+    private val ambientEngine = AmbientSoundEngine()
+
     private var currentPractice = PracticeType.MORNING_BREATH
     private var totalMillis = 3 * 60 * 1000L
     private var millisRemaining = 3 * 60 * 1000L
@@ -381,6 +384,7 @@ class HolyMeditationActivity : AppCompatActivity(), TextToSpeech.OnInitListener 
         binding.tvPlayerAnchorNotice.text = "Anchor: ${practice.defaultAnchor} • Whisper 'thinking' if mind wanders"
         updateTimerDisplay(millisRemaining)
         updateVoiceButtonUI()
+        updateAmbientButtonUI()
 
         // Configure Specialized UI Modules
         binding.moduleGrounding.visibility = if (practice == PracticeType.GROUNDING_54321) View.VISIBLE else View.GONE
@@ -404,6 +408,7 @@ class HolyMeditationActivity : AppCompatActivity(), TextToSpeech.OnInitListener 
         // Start Bell Chime (432 Hz) & Voice Script
         playMeditationChime(432.0, 2500)
         speakGuidance(practice.openingVoiceScript)
+        ambientEngine.start()
 
         startSessionTimer()
     }
@@ -411,6 +416,7 @@ class HolyMeditationActivity : AppCompatActivity(), TextToSpeech.OnInitListener 
     private fun startSessionTimer() {
         isTimerRunning = true
         binding.btnPlayerPause.text = "Pause ⏸️"
+        ambientEngine.resume()
 
         countDownTimer?.cancel()
         countDownTimer = object : CountDownTimer(millisRemaining, 1000L) {
@@ -430,6 +436,7 @@ class HolyMeditationActivity : AppCompatActivity(), TextToSpeech.OnInitListener 
         isTimerRunning = false
         countDownTimer?.cancel()
         stopGuidanceVoice()
+        ambientEngine.pause()
         binding.btnPlayerPause.text = "Resume ▶️"
         binding.tvPlayerGuidance.text = "Practice Paused • Rest in Grace"
     }
@@ -628,6 +635,13 @@ class HolyMeditationActivity : AppCompatActivity(), TextToSpeech.OnInitListener 
             updateDimOverlay()
         }
 
+        // Ambient Sound Toggle (432 Hz Drone / Gentle Rain / Mute)
+        binding.btnAmbientToggle.setOnClickListener {
+            val newMode = ambientEngine.toggleNextMode()
+            updateAmbientButtonUI()
+            speakGuidance("Background sound: ${newMode.shortLabel}")
+        }
+
         // Anchor Switchers
         binding.btnAnchorBreath.setOnClickListener {
             binding.tvPlayerAnchorNotice.text = "Anchor: Breath in nose/chest • Return gently when wandering"
@@ -653,6 +667,19 @@ class HolyMeditationActivity : AppCompatActivity(), TextToSpeech.OnInitListener 
         } else {
             binding.btnVoiceToggle.text = "🔇 Voice: OFF"
             binding.btnVoiceToggle.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+        }
+    }
+
+    private fun updateAmbientButtonUI() {
+        val mode = ambientEngine.getMode()
+        val themeColors = ThemeHelper.getActiveThemeColors(this)
+        binding.btnAmbientToggle.text = mode.label
+        if (mode != AmbientSoundEngine.AmbientMode.OFF) {
+            binding.btnAmbientToggle.setTextColor(themeColors.primaryAccent)
+            binding.btnAmbientToggle.setBackgroundResource(R.drawable.card_background_elevated)
+        } else {
+            binding.btnAmbientToggle.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+            binding.btnAmbientToggle.setBackgroundResource(R.drawable.pill_background)
         }
     }
 
@@ -682,6 +709,7 @@ class HolyMeditationActivity : AppCompatActivity(), TextToSpeech.OnInitListener 
         countDownTimer?.cancel()
         isTimerRunning = false
         stopGuidanceVoice()
+        ambientEngine.stop()
 
         val durationMinutes = ((totalMillis - millisRemaining) / 1000 / 60).toInt().coerceAtLeast(1)
 
@@ -714,6 +742,7 @@ class HolyMeditationActivity : AppCompatActivity(), TextToSpeech.OnInitListener 
         countDownTimer?.cancel()
         isTimerRunning = false
         stopGuidanceVoice()
+        ambientEngine.stop()
         binding.layoutSessionPlayer.visibility = View.GONE
         binding.layoutPostSessionModal.visibility = View.GONE
         binding.scrollMainContent.visibility = View.VISIBLE
@@ -830,5 +859,6 @@ class HolyMeditationActivity : AppCompatActivity(), TextToSpeech.OnInitListener 
         countDownTimer?.cancel()
         tts?.stop()
         tts?.shutdown()
+        ambientEngine.stop()
     }
 }
